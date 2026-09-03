@@ -1,0 +1,77 @@
+'use client';
+
+import {
+  createContext, useCallback, useContext, useMemo, useSyncExternalStore,
+  type ReactNode,
+} from 'react';
+import type { LessonId } from '@/content/curriculum';
+import { createLocalStorageStore } from './local-storage-store';
+import { emptySnapshot } from './migrations';
+import type { LessonProgress, ProgressSnapshot, ProgressStore } from './types';
+
+const ProgressContext = createContext<ProgressStore | null>(null);
+
+/** Used during prerender and in any tree without a provider. */
+const SERVER_SNAPSHOT = emptySnapshot();
+
+function createDefaultStore(): ProgressStore {
+  return createLocalStorageStore({
+    storage: window.localStorage,
+    now: () => Date.now(),
+  });
+}
+
+let browserStore: ProgressStore | null = null;
+
+function sharedBrowserStore(): ProgressStore {
+  browserStore ??= createDefaultStore();
+  return browserStore;
+}
+
+export function ProgressProvider({
+  children,
+  store,
+}: {
+  children: ReactNode;
+  /** Injected by tests and, later, by a server-backed adapter. */
+  store?: ProgressStore;
+}) {
+  const value = useMemo(
+    () => store ?? (typeof window === 'undefined' ? null : sharedBrowserStore()),
+    [store],
+  );
+  return <ProgressContext.Provider value={value}>{children}</ProgressContext.Provider>;
+}
+
+function useStore(): ProgressStore | null {
+  return useContext(ProgressContext);
+}
+
+export function useProgress(): {
+  snapshot: ProgressSnapshot;
+  store: ProgressStore | null;
+} {
+  const store = useStore();
+  const subscribe = useCallback(
+    (listener: () => void) => store?.subscribe(listener) ?? (() => {}),
+    [store],
+  );
+  const snapshot = useSyncExternalStore(
+    subscribe,
+    () => store?.load() ?? SERVER_SNAPSHOT,
+    () => SERVER_SNAPSHOT,
+  );
+  return { snapshot, store };
+}
+
+const BLANK: LessonProgress = {
+  visited: false, completed: false, completedAt: null, attempts: [],
+};
+
+export function useLessonProgress(lesson: LessonId): {
+  progress: LessonProgress;
+  store: ProgressStore | null;
+} {
+  const { snapshot, store } = useProgress();
+  return { progress: snapshot.lessons[lesson] ?? BLANK, store };
+}
