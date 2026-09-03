@@ -61,6 +61,23 @@ describe('sequentialScale', () => {
   it('rejects a non-positive maximum', () => {
     expect(() => sequentialScale(0, 'light')).toThrow(RangeError);
   });
+
+  it('reverses direction per mode: light recedes to high index, dark recedes to low index', () => {
+    const scaleLight = sequentialScale(10, 'light');
+    const scaleDark = sequentialScale(10, 'dark');
+    const lightNear = scaleLight(0.1);
+    const lightFar = scaleLight(9.9);
+    const darkNear = scaleDark(0.1);
+    const darkFar = scaleDark(9.9);
+
+    // Light: near value has lower index (lighter)
+    expect(SEQUENTIAL_BLUE.indexOf(lightNear as typeof SEQUENTIAL_BLUE[number]))
+      .toBeLessThan(SEQUENTIAL_BLUE.indexOf(lightFar as typeof SEQUENTIAL_BLUE[number]));
+
+    // Dark: near value has higher index (darker)
+    expect(SEQUENTIAL_BLUE.indexOf(darkNear as typeof SEQUENTIAL_BLUE[number]))
+      .toBeGreaterThan(SEQUENTIAL_BLUE.indexOf(darkFar as typeof SEQUENTIAL_BLUE[number]));
+  });
 });
 
 describe('divergingScale', () => {
@@ -98,6 +115,23 @@ describe('divergingScale', () => {
 
   it('rejects a domain that does not contain zero', () => {
     expect(() => divergingScale(1, 5, 'light')).toThrow(RangeError);
+  });
+
+  it('reverses cool arm direction per mode: light recedes to high index, dark recedes to low index', () => {
+    const scaleLight = divergingScale(-10, 10, 'light');
+    const scaleDark = divergingScale(-10, 10, 'dark');
+    const lightSmall = scaleLight(-0.5);
+    const lightLarge = scaleLight(-9.5);
+    const darkSmall = scaleDark(-0.5);
+    const darkLarge = scaleDark(-9.5);
+
+    // Light: small magnitude has lower index (lighter)
+    expect(SEQUENTIAL_BLUE.indexOf(lightSmall as typeof SEQUENTIAL_BLUE[number]))
+      .toBeLessThan(SEQUENTIAL_BLUE.indexOf(lightLarge as typeof SEQUENTIAL_BLUE[number]));
+
+    // Dark: small magnitude has higher index (darker)
+    expect(SEQUENTIAL_BLUE.indexOf(darkSmall as typeof SEQUENTIAL_BLUE[number]))
+      .toBeGreaterThan(SEQUENTIAL_BLUE.indexOf(darkLarge as typeof SEQUENTIAL_BLUE[number]));
   });
 });
 

@@ -54,11 +54,13 @@ function rampStep(t: number): string {
 
 /** Magnitude in a known non-negative range. One hue, light to dark. */
 export function sequentialScale(max: number, mode: Mode): (value: number) => string {
-  void mode;
   if (!(max > 0)) {
     throw new RangeError(`A sequential domain needs a positive maximum, received ${max}.`);
   }
-  return (value) => rampStep(value / max);
+  return (value) => {
+    const t = clamp01(value / max);
+    return rampStep(mode === 'dark' ? 1 - t : t);
+  };
 }
 
 /**
@@ -78,7 +80,10 @@ export function divergingScale(
   }
   const halfRange = Math.max(Math.abs(min), Math.abs(max));
   const arms = 6;
-  const coolArm = Array.from({ length: arms }, (_, i) => rampStep((i + 1) / arms));
+  const coolArm = Array.from({ length: arms }, (_, i) => {
+    const t = (i + 1) / arms;
+    return rampStep(mode === 'dark' ? 1 - t : t);
+  });
   const warmArm = warmSteps(mode, arms);
 
   return (value) => {
