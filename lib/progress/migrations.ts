@@ -28,7 +28,7 @@ function normalizeLesson(value: unknown): LessonProgress | null {
     ? value.attempts.map(normalizeAttempt).filter((a): a is AttemptRecord => a !== null)
     : [];
   return {
-    // An entry exists at all only because the lesson was opened.
+    // An entry's presence implies interaction, so missing flag reads as visited.
     visited: value.visited === undefined ? true : value.visited === true,
     completed,
     completedAt: typeof value.completedAt === 'number' ? value.completedAt : null,
@@ -46,14 +46,38 @@ function normalizeNotes(value: unknown): Record<string, string> {
 }
 
 /** v0 was unversioned: a bare list of completed lesson ids. */
-function fromV0(raw: Record<string, unknown>): ProgressSnapshot {
-  const snapshot = emptySnapshot();
+function v0ToV1(raw: Record<string, unknown>): Record<string, unknown> {
+  const lessons: Record<string, unknown> = {};
   const completed = Array.isArray(raw.completed) ? raw.completed : [];
   for (const id of completed) {
     if (typeof id !== 'string') continue;
-    snapshot.lessons[id] = { visited: true, completed: true, completedAt: null, attempts: [] };
+    lessons[id] = { visited: true, completed: true, completedAt: null, attempts: [] };
   }
-  return snapshot;
+  return { version: 1, lessons, notes: {} };
+}
+
+/**
+ * Step i takes a version-i payload to version i+1. Each returns a raw record
+ * rather than a ProgressSnapshot, because only the final normalize produces the
+ * typed shape. Append one function per schema bump and raise
+ * PROGRESS_SCHEMA_VERSION in the same change.
+ */
+const STEPS: ReadonlyArray<(raw: Record<string, unknown>) => Record<string, unknown>> = [
+  v0ToV1,
+];
+
+/** Exported so a schema bump that forgets its step fails a test, not a learner's load. */
+export const MIGRATION_STEP_COUNT = STEPS.length;
+
+function normalizeCurrent(raw: Record<string, unknown>): ProgressSnapshot {
+  const lessons: Record<string, LessonProgress> = {};
+  if (isRecord(raw.lessons)) {
+    for (const [id, value] of Object.entries(raw.lessons)) {
+      const lesson = normalizeLesson(value);
+      if (lesson) lessons[id] = lesson;
+    }
+  }
+  return { version: PROGRESS_SCHEMA_VERSION, lessons, notes: normalizeNotes(raw.notes) };
 }
 
 /**
@@ -63,17 +87,14 @@ function fromV0(raw: Record<string, unknown>): ProgressSnapshot {
  */
 export function migrate(raw: unknown): ProgressSnapshot {
   if (!isRecord(raw)) return emptySnapshot();
-
   const version = typeof raw.version === 'number' ? raw.version : 0;
-  if (version === 0) return fromV0(raw);
   if (version > PROGRESS_SCHEMA_VERSION) return emptySnapshot();
 
-  const lessons: Record<string, LessonProgress> = {};
-  if (isRecord(raw.lessons)) {
-    for (const [id, value] of Object.entries(raw.lessons)) {
-      const lesson = normalizeLesson(value);
-      if (lesson) lessons[id] = lesson;
-    }
+  let data = raw;
+  for (let v = version; v < PROGRESS_SCHEMA_VERSION; v += 1) {
+    const step = STEPS[v];
+    if (step === undefined) return emptySnapshot();
+    data = step(data);
   }
-  return { version: PROGRESS_SCHEMA_VERSION, lessons, notes: normalizeNotes(raw.notes) };
+  return normalizeCurrent(data);
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PROGRESS_SCHEMA_VERSION } from './types';
-import { emptySnapshot, migrate } from './migrations';
+import { emptySnapshot, migrate, MIGRATION_STEP_COUNT } from './migrations';
 
 describe('migrate', () => {
   it('returns an empty snapshot at the current version for null', () => {
@@ -58,5 +58,16 @@ describe('migrate', () => {
     expect(snapshot.lessons['a']).toEqual({
       visited: true, completed: true, completedAt: null, attempts: [],
     });
+  });
+
+  it('has a migration step for every version below the current one', () => {
+    // A schema bump that forgets its step must fail here rather than silently
+    // stamping old data with the new version number.
+    expect(MIGRATION_STEP_COUNT).toBe(PROGRESS_SCHEMA_VERSION);
+  });
+
+  it('discards a payload whose version has no migration path', () => {
+    // Proves the missing-step guard can actually fire.
+    expect(migrate({ version: -1, lessons: { a: { completed: true } } }).lessons).toEqual({});
   });
 });
