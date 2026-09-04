@@ -95,7 +95,10 @@ export function isAnswered<S extends ExerciseSpec>(spec: S, answer: AnswerFor<S>
       const index = answer as number;
       return Number.isInteger(index) && index >= 0 && index < spec.options.length;
     }
-    case 'vector':
-      return (answer as readonly number[]).every((value) => Number.isFinite(value));
+    case 'vector': {
+      const values = answer as readonly number[];
+      return values.length === spec.answer.length
+        && values.every((value) => Number.isFinite(value));
+    }
   }
 }

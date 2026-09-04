@@ -164,4 +164,10 @@ describe('isAnswered', () => {
   it('is false when a vector is partly filled in', () => {
     expect(isAnswered(vector, [2, Number.NaN])).toBe(false);
   });
+
+  it('is false for an empty answer to a vector exercise', () => {
+    // [].every() is vacuously true, so without a length check this gates as
+    // answered and only fails later inside check().
+    expect(isAnswered(vector, [])).toBe(false);
+  });
 });
