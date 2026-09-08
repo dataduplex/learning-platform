@@ -90,8 +90,13 @@ describe('choice exercises', () => {
   });
 
   it('falls back to a generic message when no explanation is authored', () => {
-    const { explanations, ...withoutExplanations } = choice;
-    const bare: ChoiceExercise = withoutExplanations;
+    const bare: ChoiceExercise = {
+      kind: 'choice',
+      id: choice.id,
+      prompt: choice.prompt,
+      options: choice.options,
+      correctIndex: choice.correctIndex,
+    };
     expect(check(bare, 1).message).toMatch(/not right/i);
     expect(check(bare, 0).message).toMatch(/correct/i);
   });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PROGRESS_SCHEMA_VERSION } from './types';
-import { emptySnapshot, migrate, MIGRATION_STEP_COUNT } from './migrations';
+import { migrate, MIGRATION_STEP_COUNT } from './migrations';
 
 describe('migrate', () => {
   it('returns an empty snapshot at the current version for null', () => {
