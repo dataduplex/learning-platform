@@ -50,7 +50,11 @@ export function Exercise({ spec, lesson }: { spec: ExerciseSpec; lesson: LessonI
   }
 
   return (
-    <section className="exercise" aria-labelledby={`${groupId}-prompt`}>
+    <section
+      className="exercise"
+      data-exercise-kind={spec.kind}
+      aria-labelledby={`${groupId}-prompt`}
+    >
       <h4 className="exercise-kicker">
         {spec.kind === 'predict' ? 'Predict, then check' : 'Exercise'}
       </h4>

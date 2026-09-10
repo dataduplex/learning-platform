@@ -55,7 +55,7 @@ export function CodeCell({
       : null;
 
   return (
-    <div className="code-cell">
+    <div className="code-cell" data-code-cell>
       <div className="code-cell-head">
         <span className="code-cell-label">{label}</span>
         <button type="button" onClick={() => void run()} disabled={busy}>
