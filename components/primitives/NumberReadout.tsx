@@ -12,17 +12,20 @@ export function NumberReadout({
   value,
   digits = 2,
   unit,
+  testId,
 }: {
   label: string;
   value: number;
   digits?: number;
   unit?: string;
+  /** Put on the number itself, for a test that needs the value and not the label. */
+  testId?: string;
 }) {
   return (
     <div className="readout">
       <dt className="readout-label">{label}</dt>
       <dd className="readout-value">
-        <span className="readout-number">{formatFixed(value, digits)}</span>
+        <span className="readout-number" data-testid={testId}>{formatFixed(value, digits)}</span>
         {unit === undefined ? null : <span className="readout-unit">{unit}</span>}
       </dd>
     </div>

@@ -32,6 +32,11 @@ describe('NumberReadout', () => {
     expect(screen.getByText('degrees')).toBeInTheDocument();
   });
 
+  it('puts an optional test id on the number, not the label', () => {
+    render(<NumberReadout label="error" value={0.25} digits={2} testId="the-error" />);
+    expect(screen.getByTestId('the-error')).toHaveTextContent('0.25');
+  });
+
   it('exposes label and value as a description list pair', () => {
     render(<NumberReadout label="norm" value={5} digits={2} />);
     expect(document.querySelector('dt')).toHaveTextContent('norm');
