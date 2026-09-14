@@ -9,7 +9,6 @@ import type { PlotScales } from './Plot';
 
 /**
  * Level curves of a scalar field, drawn inside a Plot through its render prop.
- * Plot is untouched: this composes the same way VectorHandle does.
  */
 export function ContourField({
   scales,
@@ -51,13 +50,7 @@ export function ContourField({
   );
 }
 
-/**
- * Marching squares emits unordered segments, so each one is drawn as its own
- * move-and-line rather than stitched into a polyline. Two hundred short subpaths
- * cost nothing here and stitching would need a shared-endpoint join that the
- * contour test already proves is exact - but which would be a second place for a
- * floating-point key to go wrong.
- */
+/** Marching squares emits unordered segments, so each is its own move-and-line. */
 function toPath(segments: readonly Segment[], scales: PlotScales): string | null {
   if (segments.length === 0) return null;
   return segments
