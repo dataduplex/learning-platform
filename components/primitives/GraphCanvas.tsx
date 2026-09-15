@@ -32,7 +32,11 @@ const PAD = 10;
 const BOX_W = 92;
 const BOX_H = 56;
 const COL_PITCH = 132;
-const ROW_PITCH = 72;
+/**
+ * Generous against BOX_H: a diagonal spanning several columns has to clear the boxes
+ * standing between its ends, and so does its label.
+ */
+const ROW_PITCH = 96;
 
 export function GraphCanvas({
   nodes,
@@ -62,6 +66,20 @@ export function GraphCanvas({
   const cx = (node: GraphNode): number => PAD + BOX_W / 2 + node.x * COL_PITCH;
   const cy = (node: GraphNode): number => PAD + BOX_H / 2 + (node.y - yMin) * ROW_PITCH;
   const find = (nodeId: string): GraphNode | undefined => nodes.find((node) => node.id === nodeId);
+
+  const incoming = new Map<string, GraphEdge[]>();
+  for (const edge of edges) {
+    const shared = incoming.get(edge.toId) ?? [];
+    shared.push(edge);
+    incoming.set(edge.toId, shared);
+  }
+
+  /** Edges into one node arrive at distinct heights, so their labels cannot coincide. */
+  function arrivalY(edge: GraphEdge, to: GraphNode): number {
+    const shared = incoming.get(edge.toId) ?? [];
+    const index = shared.indexOf(edge);
+    return cy(to) + (index - (shared.length - 1) / 2) * (BOX_H / (shared.length + 1));
+  }
 
   const reading = [...nodes].sort((left, right) => left.x - right.x || left.y - right.y);
   const focusId = nodes.some((node) => node.id === wanted) ? wanted : (reading[0]?.id ?? '');
@@ -144,18 +162,8 @@ export function GraphCanvas({
                   x1={x1}
                   y1={cy(from)}
                   x2={x2}
-                  y2={cy(to)}
+                  y2={arrivalY(edge, to)}
                 />
-                {edge.label === undefined ? null : (
-                  <text
-                    className="graph-edge-label"
-                    x={(x1 + x2) / 2}
-                    y={(cy(from) + cy(to)) / 2 - 5}
-                    textAnchor="middle"
-                  >
-                    {edge.label}
-                  </text>
-                )}
               </g>
             );
           })}
@@ -203,6 +211,35 @@ export function GraphCanvas({
             ))}
           </g>
         ))}
+
+        {/*
+          Labels last, and each one inside the empty channel left of the node it points at.
+          That channel is COL_PITCH - BOX_W wide and no box can reach into it, so a label
+          cannot land on top of an unrelated node however far its edge travels.
+        */}
+        <g className="graph-edge-labels" aria-hidden="true">
+          {edges.map((edge) => {
+            const from = find(edge.fromId);
+            const to = find(edge.toId);
+            if (from === undefined || to === undefined || edge.label === undefined) return null;
+            const x1 = cx(from) + BOX_W / 2;
+            const x2 = cx(to) - BOX_W / 2;
+            const x = x2 - 6;
+            const along = (x - x1) / (x2 - x1);
+            const y2 = arrivalY(edge, to);
+            return (
+              <text
+                key={`${edge.fromId}-${edge.toId}`}
+                className="graph-edge-label"
+                x={x}
+                y={cy(from) + (y2 - cy(from)) * along - 4}
+                textAnchor="end"
+              >
+                {edge.label}
+              </text>
+            );
+          })}
+        </g>
       </svg>
 
       <figcaption className="graph-canvas-caption">{caption}</figcaption>

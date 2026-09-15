@@ -39,6 +39,33 @@ describe('GraphCanvas', () => {
     expect(labels).toEqual(['4.00', '-1.00']);
   });
 
+  it('draws edge labels after every node, so a box cannot cover one', () => {
+    const { container } = renderCanvas();
+    const marks = [...(container.querySelector('svg')?.children ?? [])].map((mark) => mark.getAttribute('class'));
+    expect(marks.indexOf('graph-edge-labels')).toBeGreaterThan(marks.lastIndexOf('graph-node'));
+  });
+
+  it('lands two edges into one node at different heights, so their labels cannot coincide', () => {
+    const { container } = renderCanvas();
+    const arrivals = [...container.querySelectorAll('line.graph-edge')]
+      .filter((line) => Number(line.getAttribute('x2')) === 274)
+      .map((line) => Number(line.getAttribute('y2')));
+    expect(arrivals).toHaveLength(2);
+    expect(Math.abs((arrivals[0] ?? 0) - (arrivals[1] ?? 0))).toBeCloseTo(56 / 3, 5);
+
+    const labelYs = [...container.querySelectorAll('text.graph-edge-label')]
+      .map((text) => Number(text.getAttribute('y')));
+    expect(new Set(labelYs).size).toBe(2);
+  });
+
+  it('keeps an edge label in the empty channel beside the node it points at', () => {
+    const { container } = renderCanvas();
+    // The d box starts at x=274, so a label ending at 268 sits in the 40px channel before it.
+    const label = container.querySelector('text.graph-edge-label');
+    expect(label).toHaveAttribute('x', '268');
+    expect(label).toHaveAttribute('text-anchor', 'end');
+  });
+
   it('marks the edges the caller called active, so a step is visible', () => {
     const { container } = renderCanvas();
     expect(container.querySelectorAll('line.graph-edge[data-active="true"]')).toHaveLength(2);
@@ -109,7 +136,7 @@ describe('GraphCanvas', () => {
   it('sizes its viewBox from the nodes it was given', () => {
     const { container } = renderCanvas();
     // Three columns and three rows at the documented pitch.
-    expect(container.querySelector('svg')).toHaveAttribute('viewBox', '0 0 376 220');
+    expect(container.querySelector('svg')).toHaveAttribute('viewBox', '0 0 376 268');
   });
 
   it('offers the numbers as a table, which starts closed', async () => {
