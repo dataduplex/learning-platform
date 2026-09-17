@@ -60,4 +60,15 @@ describe('Heatmap', () => {
     render(<Heatmap matrix={matrix} colorFor={colorFor} caption="Attention weights" />);
     expect(screen.getByRole('group', { name: /Attention weights/ })).toBeInTheDocument();
   });
+
+  it('prints no value in a cell unless asked, so colour stays the default reading', () => {
+    render(<Heatmap matrix={matrix} colorFor={colorFor} caption="c" />);
+    expect(document.querySelectorAll('.heatmap-value')).toHaveLength(0);
+  });
+
+  it('prints every value in its cell when asked', () => {
+    render(<Heatmap matrix={matrix} colorFor={colorFor} caption="c" showValues digits={1} />);
+    const values = [...document.querySelectorAll('.heatmap-value')].map((n) => n.textContent);
+    expect(values).toEqual(['-1.0', '0.0', '2.0', '5.0']);
+  });
 });
