@@ -19,6 +19,7 @@ export function Heatmap({
   colLabels,
   cellSize = 34,
   digits = 2,
+  showValues = false,
   onActiveCell,
 }: {
   matrix: Mat;
@@ -29,6 +30,8 @@ export function Heatmap({
   colLabels?: readonly string[];
   cellSize?: number;
   digits?: number;
+  /** Print each value in its cell. Needs a cellSize wide enough for the formatted number. */
+  showValues?: boolean;
   onActiveCell?: (cell: ActiveCell | null) => void;
 }) {
   const id = useId();
@@ -98,6 +101,20 @@ export function Heatmap({
               />
             );
           }),
+        )}
+
+        {showValues && Array.from({ length: matrix.rows }).flatMap((_, row) =>
+          Array.from({ length: matrix.cols }).map((__, col) => (
+            <text
+              key={`v-${row}-${col}`}
+              className="heatmap-value"
+              x={gutterLeft + col * cellSize + cellSize / 2}
+              y={gutterTop + row * cellSize + cellSize / 2 + 4}
+              textAnchor="middle"
+            >
+              {formatFixed(at(matrix, row, col), digits)}
+            </text>
+          )),
         )}
       </svg>
       <figcaption className="heatmap-caption">{caption}</figcaption>
