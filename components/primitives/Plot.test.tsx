@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { Plot, createScales } from './Plot';
+import { Plot, createScales, pixel, polylinePoints } from './Plot';
 
 const BOX = { left: 40, top: 20, width: 300, height: 200 };
 
@@ -93,6 +93,18 @@ describe('Plot', () => {
   it('renders no gridlines when no step is given', () => {
     render(<Plot title="p" xDomain={[0, 1]} yDomain={[0, 1]} />);
     expect(document.querySelectorAll('[data-role="gridline"]')).toHaveLength(0);
+  });
+
+  it('quantises a drawn coordinate, so two Math implementations agree on it', () => {
+    // The defect this prevents: a curve computed with Math.log renders one string at
+    // build time and a string differing in its last digits in the browser, which
+    // hydration reports as a mismatched attribute it will not patch up.
+    expect(pixel(229.48806957648713)).toBe(229.49);
+    expect(pixel(229.48806957648710)).toBe(pixel(229.48806957648713));
+    expect(pixel(-0.004)).toBe(-0);
+    expect(polylinePoints([[36, 229.48806957648713], [40.2947368421, 215.273956]]))
+      .toBe('36,229.49 40.29,215.27');
+    expect(polylinePoints([])).toBe('');
   });
 
   it('grids one axis only when asked, for a figure whose axes share no units', () => {

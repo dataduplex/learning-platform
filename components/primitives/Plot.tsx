@@ -64,6 +64,24 @@ export function createScales(
   };
 }
 
+/**
+ * A drawn coordinate, quantised to hundredths of a pixel. Sub-pixel precision is
+ * invisible, and rounding makes the value identical wherever it is computed:
+ * `Math.log` and `Math.exp` are allowed to differ in their last bits between
+ * implementations, which React reports as a hydration mismatch when a figure is
+ * rendered once at build time and again in the browser.
+ */
+export function pixel(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/** A polyline's `points` attribute, with every coordinate quantised. */
+export function polylinePoints(points: Iterable<readonly [number, number]>): string {
+  const parts: string[] = [];
+  for (const [x, y] of points) parts.push(`${pixel(x)},${pixel(y)}`);
+  return parts.join(' ');
+}
+
 /** Multiples of `step` inside the closed domain. */
 function ticksFor(domain: readonly [number, number], step: number): number[] {
   const [low, high] = domain;
