@@ -7,6 +7,12 @@ export function formatFixed(value: number, digits: number): string {
   return (value + 0).toFixed(digits);
 }
 
+/** For a value small enough that fixed point prints only zeros. */
+export function formatExponential(value: number, digits: number): string {
+  if (!Number.isFinite(value)) return '-';
+  return value.toExponential(digits);
+}
+
 export function NumberReadout({
   label,
   value,

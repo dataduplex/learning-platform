@@ -64,6 +64,24 @@ export function createScales(
   };
 }
 
+/**
+ * A drawn coordinate, quantised to hundredths of a pixel. Sub-pixel precision is
+ * invisible, and rounding makes the value identical wherever it is computed:
+ * `Math.log` and `Math.exp` are allowed to differ in their last bits between
+ * implementations, which React reports as a hydration mismatch when a figure is
+ * rendered once at build time and again in the browser.
+ */
+export function pixel(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/** A polyline's `points` attribute, with every coordinate quantised. */
+export function polylinePoints(points: Iterable<readonly [number, number]>): string {
+  const parts: string[] = [];
+  for (const [x, y] of points) parts.push(`${pixel(x)},${pixel(y)}`);
+  return parts.join(' ');
+}
+
 /** Multiples of `step` inside the closed domain. */
 function ticksFor(domain: readonly [number, number], step: number): number[] {
   const [low, high] = domain;
@@ -76,6 +94,12 @@ function ticksFor(domain: readonly [number, number], step: number): number[] {
   return ticks;
 }
 
+/**
+ * Which axes `gridStep` applies to. One spacing cannot serve two axes measured in
+ * different units, as on a density plotted against its variable.
+ */
+export type GridAxis = 'both' | 'x' | 'y';
+
 export interface PlotProps {
   /** The accessible name. Required: an unnamed figure is unusable without sight. */
   title: string;
@@ -87,6 +111,7 @@ export interface PlotProps {
   padding?: number;
   /** Gridline spacing in data units. Omit for no grid. */
   gridStep?: number;
+  gridAxis?: GridAxis;
   aspect?: Aspect;
   xLabel?: string;
   yLabel?: string;
@@ -102,6 +127,7 @@ export function Plot({
   height = 360,
   padding = 36,
   gridStep,
+  gridAxis = 'both',
   aspect = 'fill',
   xLabel,
   yLabel,
@@ -117,8 +143,8 @@ export function Plot({
   const scales = createScales(xDomain, yDomain, box, aspect);
   const { inner } = scales;
 
-  const xTicks = gridStep === undefined ? [] : ticksFor(xDomain, gridStep);
-  const yTicks = gridStep === undefined ? [] : ticksFor(yDomain, gridStep);
+  const xTicks = gridStep === undefined || gridAxis === 'y' ? [] : ticksFor(xDomain, gridStep);
+  const yTicks = gridStep === undefined || gridAxis === 'x' ? [] : ticksFor(yDomain, gridStep);
   const showZeroX = xDomain[0] <= 0 && 0 <= xDomain[1];
   const showZeroY = yDomain[0] <= 0 && 0 <= yDomain[1];
 
