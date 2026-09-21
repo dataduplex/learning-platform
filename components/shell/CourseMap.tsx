@@ -17,8 +17,9 @@ export function CourseMap() {
       <header className="course-map-head">
         <ProgressRing done={doneCount} total={lessons.length} />
         <p className="course-map-note">
-          Part I is written. The later parts are listed so the shape of the whole course is
-          visible from the start. <Link href="/notation">Notation reference</Link>.
+          Lessons marked planned are not written yet. They are listed anyway, so the shape of
+          the whole course is visible from the start. <Link href="/notation">Notation
+          reference</Link>.
         </p>
       </header>
 
