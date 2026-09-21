@@ -94,4 +94,24 @@ describe('Plot', () => {
     render(<Plot title="p" xDomain={[0, 1]} yDomain={[0, 1]} />);
     expect(document.querySelectorAll('[data-role="gridline"]')).toHaveLength(0);
   });
+
+  it('grids one axis only when asked, for a figure whose axes share no units', () => {
+    const { unmount } = render(
+      <Plot title="p" xDomain={[1, 5]} yDomain={[1, 5]} gridStep={1} gridAxis="x" />,
+    );
+    const vertical = [...document.querySelectorAll('[data-role="gridline"]')];
+    expect(vertical).toHaveLength(5);
+    // Every surviving line runs top to bottom, so none of them is a horizontal one.
+    for (const line of vertical) {
+      expect(line.getAttribute('x1')).toBe(line.getAttribute('x2'));
+    }
+    unmount();
+
+    render(<Plot title="p" xDomain={[1, 5]} yDomain={[1, 5]} gridStep={1} gridAxis="y" />);
+    const horizontal = [...document.querySelectorAll('[data-role="gridline"]')];
+    expect(horizontal).toHaveLength(5);
+    for (const line of horizontal) {
+      expect(line.getAttribute('y1')).toBe(line.getAttribute('y2'));
+    }
+  });
 });
