@@ -34,7 +34,7 @@ export function MatrixInput({
       className="matrix-input"
       role="group"
       aria-labelledby={`${id}-label`}
-      style={{ gridTemplateColumns: `repeat(${value.cols}, minmax(0, 3.5rem))` }}
+      style={{ gridTemplateColumns: `repeat(${value.cols}, minmax(0, 4.5rem))` }}
     >
       <span className="sr-only" id={`${id}-label`}>
         {label}, {value.rows} by {value.cols} matrix
