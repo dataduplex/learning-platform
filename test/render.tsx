@@ -94,3 +94,17 @@ export function polygonPoints(polygon: Element | null): [number, number][] {
   const points = polygon?.getAttribute('points') ?? '';
   return points === '' ? [] : points.split(' ').map((pair) => pair.split(',').map(Number) as [number, number]);
 }
+
+/** A line's drawn endpoints, x1, y1, x2 and y2, as written on the element. */
+export function lineEnds(line: Element | null): (string | null | undefined)[] {
+  return ['x1', 'y1', 'x2', 'y2'].map((name) => line?.getAttribute(name));
+}
+
+/** Where a butt-capped stroke of `width` around a drawn line reaches: its four corners. */
+export function strokeCorners(line: Element | null, width: number): [number, number][] {
+  const [x1, y1, x2, y2] = lineEnds(line).map(Number) as [number, number, number, number];
+  const length = Math.hypot(x2 - x1, y2 - y1);
+  const nx = (-(y2 - y1) / length) * (width / 2);
+  const ny = ((x2 - x1) / length) * (width / 2);
+  return [[x1 + nx, y1 + ny], [x2 + nx, y2 + ny], [x2 - nx, y2 - ny], [x1 - nx, y1 - ny]];
+}

@@ -7,6 +7,8 @@ export const HEAD_LENGTH = 9;
 export const HEAD_HALF_WIDTH = 4;
 /** In pixels: a point this close to the box counts as inside, so float error never cuts a vector. */
 const TOLERANCE = 1e-6;
+/** In pixels: room left at a cut end, so rounding a drawn coordinate never moves its stroke outside. */
+const QUANTUM = 0.01;
 
 interface PixelBox {
   readonly left: number;
@@ -15,15 +17,52 @@ interface PixelBox {
   readonly bottom: number;
 }
 
-function pixelBox(scales: PlotScales, box: Domain2): PixelBox {
+/** The box in pixels, grown by `margin` on every side, or shrunk when it is negative. */
+function pixelBox(scales: PlotScales, box: Domain2, margin = TOLERANCE): PixelBox {
   const xs = [scales.x(box.x[0]), scales.x(box.x[1])];
   const ys = [scales.y(box.y[0]), scales.y(box.y[1])];
   return {
-    left: Math.min(...xs) - TOLERANCE,
-    right: Math.max(...xs) + TOLERANCE,
-    top: Math.min(...ys) - TOLERANCE,
-    bottom: Math.max(...ys) + TOLERANCE,
+    left: Math.min(...xs) - margin,
+    right: Math.max(...xs) + margin,
+    top: Math.min(...ys) - margin,
+    bottom: Math.max(...ys) + margin,
   };
+}
+
+/** The stretch of (x1, y1) to (x2, y2) inside the box, as fractions along it, by Liang-Barsky. */
+function insideFractions(
+  x1: number, y1: number, x2: number, y2: number, box: PixelBox,
+): readonly [number, number] | null {
+  let enter = 0;
+  let leave = 1;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const bounds = [[-dx, x1 - box.left], [dx, box.right - x1], [-dy, y1 - box.top], [dy, box.bottom - y1]] as const;
+  for (const [step, room] of bounds) {
+    if (step === 0) {
+      if (room < 0) return null;
+    } else if (step < 0) {
+      enter = Math.max(enter, room / step);
+    } else {
+      leave = Math.min(leave, room / step);
+    }
+  }
+  return enter <= leave ? [enter, leave] : null;
+}
+
+/** Where both edges of a stroke `halfWidth` either side of the line lie inside the box. */
+function strokeFractions(
+  x1: number, y1: number, x2: number, y2: number, halfWidth: number, box: PixelBox,
+): readonly [number, number] | null {
+  const length = Math.hypot(x2 - x1, y2 - y1);
+  const nx = (-(y2 - y1) / length) * halfWidth;
+  const ny = ((x2 - x1) / length) * halfWidth;
+  const one = insideFractions(x1 + nx, y1 + ny, x2 + nx, y2 + ny, box);
+  const other = insideFractions(x1 - nx, y1 - ny, x2 - nx, y2 - ny, box);
+  if (one === null || other === null) return null;
+  const enter = Math.max(one[0], other[0]);
+  const leave = Math.min(one[1], other[1]);
+  return enter <= leave ? [enter, leave] : null;
 }
 
 /**
@@ -108,30 +147,47 @@ export interface Segment {
   readonly y1: number;
   readonly x2: number;
   readonly y2: number;
-  /** It stops where it leaves the box, short of the point it heads for. */
+  /** It is cut at the box, short of one end or both. */
   readonly clipped: boolean;
 }
 
-/** A segment from a point in the box toward another, cut where it leaves the box. Null under a pixel. */
-export function segmentWithin(scales: PlotScales, from: Point2D, to: Point2D, within: Domain2): Segment | null {
-  const { point, clipped } = clipRay(from, to, within);
-  const x1 = pixel(scales.x(from[0]));
-  const y1 = pixel(scales.y(from[1]));
-  const x2 = pixel(scales.x(point[0]));
-  const y2 = pixel(scales.y(point[1]));
-  return Math.hypot(x2 - x1, y2 - y1) < 1 ? null : { x1, y1, x2, y2, clipped };
+/**
+ * The part of the segment from `from` to `to` that a butt-capped stroke `halfWidth` either
+ * side of it paints inside the box, in drawn pixels. Null under a pixel.
+ */
+export function segmentWithin(
+  scales: PlotScales, from: Point2D, to: Point2D, within: Domain2, halfWidth: number,
+): Segment | null {
+  const x1 = scales.x(from[0]);
+  const y1 = scales.y(from[1]);
+  const x2 = scales.x(to[0]);
+  const y2 = scales.y(to[1]);
+  const length = Math.hypot(x2 - x1, y2 - y1);
+  if (length < 1) return null;
+  const exact = strokeFractions(x1, y1, x2, y2, halfWidth, pixelBox(scales, within));
+  const safe = strokeFractions(x1, y1, x2, y2, halfWidth, pixelBox(scales, within, -QUANTUM));
+  if (exact === null || safe === null) return null;
+  const enter = exact[0] > 0 ? safe[0] : 0;
+  const leave = exact[1] < 1 ? safe[1] : 1;
+  if ((leave - enter) * length < 1) return null;
+  return {
+    x1: pixel(x1 + (x2 - x1) * enter),
+    y1: pixel(y1 + (y2 - y1) * enter),
+    x2: pixel(x1 + (x2 - x1) * leave),
+    y2: pixel(y1 + (y2 - y1) * leave),
+    clipped: exact[0] > 0 || exact[1] < 1,
+  };
 }
 
 /** A vector from tail to tip, with a drawn head so its direction never has to be guessed. */
 export function VectorArrow({
-  scales, from, to, color, className, dashed = false, within,
+  scales, from, to, color, className, within,
 }: {
   scales: PlotScales;
   from: Point2D;
   to: Point2D;
   color: string;
   className: string;
-  dashed?: boolean;
   within?: Domain2;
 }) {
   const geometry = arrowGeometry(scales, from, to, within);
@@ -149,7 +205,6 @@ export function VectorArrow({
         data-role="vector-shaft"
         x1={pixel(x0)} y1={pixel(y0)} x2={pixel(baseX)} y2={pixel(baseY)}
         stroke={color}
-        {...(dashed ? { strokeDasharray: '4 3' } : {})}
         {...marked}
       />
       <path

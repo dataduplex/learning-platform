@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { expectInside, pathPoints } from '@/test/render';
+import { expectInside, pathPoints, strokeCorners } from '@/test/render';
 import { createScales, pixel } from './Plot';
 import { VectorArrow, arrowGeometry, segmentWithin } from './VectorArrow';
 
@@ -93,14 +93,32 @@ describe('arrowGeometry', () => {
 
 describe('segmentWithin', () => {
   const box = { x: [-5, 5], y: [-5, 5] } as const;
+  const frame = { left: 0, top: 0, right: 400, bottom: 400 };
 
   it('cuts a segment where it leaves the box, in drawn pixels', () => {
-    expect(segmentWithin(scales, [0, 0], [10, 0], box)).toEqual({ x1: 200, y1: 200, x2: 400, y2: 200, clipped: true });
-    expect(segmentWithin(scales, [0, 0], [1, 1], box)).toEqual({ x1: 200, y1: 200, x2: 240, y2: 160, clipped: false });
+    // A cut end stops a hundredth inside, so its quantised stroke never crosses the edge.
+    expect(segmentWithin(scales, [0, 0], [10, 0], box, 0)).toEqual({ x1: 200, y1: 200, x2: 399.99, y2: 200, clipped: true });
+    expect(segmentWithin(scales, [0, 0], [1, 1], box, 0)).toEqual({ x1: 200, y1: 200, x2: 240, y2: 160, clipped: false });
   });
 
-  it('is null when less than a pixel of it is left inside', () => {
-    expect(segmentWithin(scales, [5, 0], [6, 1], box)).toBeNull();
-    expect(segmentWithin(scales, [1, 1], [1, 1], box)).toBeNull();
+  it('keeps both edges of its stroke inside, cutting where the outer edge would cross', () => {
+    // Nearly along the right edge, a 2px stroke's outer edge reaches x = 400 long before its
+    // centreline does.
+    const segment = segmentWithin(scales, [4.9, -3], [5.2, 3], box, 1);
+    expect(segment).toEqual({ x1: 396, y1: 320, x2: 398.99, y2: 260.18, clipped: true });
+    const { container } = render(
+      <svg><line x1={segment?.x1} y1={segment?.y1} x2={segment?.x2} y2={segment?.y2} /></svg>,
+    );
+    expectInside(strokeCorners(container.querySelector('line'), 2), frame);
+  });
+
+  it('keeps an end on the edge whole when its stroke lies across it', () => {
+    expect(segmentWithin(scales, [5, 0], [0, 0], box, 1)).toEqual({ x1: 400, y1: 200, x2: 200, y2: 200, clipped: false });
+  });
+
+  it('is null when no stroke of that width fits, or under a pixel of it is left inside', () => {
+    expect(segmentWithin(scales, [5, -2], [5, 2], box, 1)).toBeNull();
+    expect(segmentWithin(scales, [5, 0], [6, 1], box, 0)).toBeNull();
+    expect(segmentWithin(scales, [1, 1], [1, 1], box, 0)).toBeNull();
   });
 });
