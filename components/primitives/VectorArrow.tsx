@@ -3,8 +3,8 @@
 import { clipRay, type Domain2 } from '@/lib/linalg';
 import { pixel, type PlotScales } from './Plot';
 
-const HEAD_LENGTH = 9;
-const HEAD_HALF_WIDTH = 4;
+export const HEAD_LENGTH = 9;
+export const HEAD_HALF_WIDTH = 4;
 /** In pixels: a point this close to the box counts as inside, so float error never cuts a vector. */
 const TOLERANCE = 1e-6;
 
