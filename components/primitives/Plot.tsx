@@ -2,6 +2,10 @@
 
 import { useId, type ReactNode } from 'react';
 
+/** The shared size of a data chart: the widget card's content width, at the old 480 by 300 aspect. */
+export const CHART_WIDTH = 598;
+export const CHART_HEIGHT = 374;
+
 export interface Box {
   left: number;
   top: number;

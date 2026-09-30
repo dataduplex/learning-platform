@@ -2,7 +2,8 @@
 
 import { useRef, type KeyboardEvent, type PointerEvent } from 'react';
 import { formatFixed } from './NumberReadout';
-import type { PlotScales } from './Plot';
+import { pixel, type PlotScales } from './Plot';
+import { VectorArrow } from './VectorArrow';
 
 export type Point2 = [number, number];
 
@@ -31,8 +32,6 @@ export function VectorHandle({
 }) {
   const dragging = useRef(false);
   const [x, y] = value;
-  const originX = scales.x(0);
-  const originY = scales.y(0);
   const tipX = scales.x(x);
   const tipY = scales.y(y);
 
@@ -93,18 +92,15 @@ export function VectorHandle({
         event.currentTarget.releasePointerCapture(event.pointerId);
       }}
     >
-      <line
-        data-role="vector-shaft"
-        className="vector-shaft"
-        x1={originX}
-        y1={originY}
-        x2={tipX}
-        y2={tipY}
-        stroke={color}
+      <VectorArrow scales={scales} from={[0, 0]} to={value} color={color} className="vector-shaft" />
+      {/* The grab area is 24px across, wider than the head it sits on. */}
+      <circle className="vector-grab" cx={pixel(tipX)} cy={pixel(tipY)} r={12} />
+      <circle
+        data-role="vector-tip"
+        className="vector-tip"
+        cx={pixel(tipX)} cy={pixel(tipY)} r={7}
+        fill="none" stroke={color}
       />
-      {/* A wide invisible target: the visible dot is 8px, the grab area is 22px. */}
-      <circle className="vector-grab" cx={tipX} cy={tipY} r={11} />
-      <circle data-role="vector-tip" className="vector-tip" cx={tipX} cy={tipY} r={5} fill={color} />
     </g>
   );
 }
