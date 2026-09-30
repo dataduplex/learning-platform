@@ -31,6 +31,39 @@ describe('VectorArrow', () => {
     expect(container.querySelector('path.v-head')).toHaveAttribute('data-clipped', 'true');
   });
 
+  it('pulls the tip back until its head clears an edge the vector leaves nearly along', () => {
+    const { container } = render(
+      <svg>
+        <VectorArrow scales={scales} from={[-4, 4.5]} to={[6, 5.3]} color="red" className="v" within={{ x: [-5, 5], y: [-5, 5] }} />
+      </svg>,
+    );
+    // The ray leaves through the top at (2.25, 5), pixel (290, 0), where its upper corner
+    // would sit 3.27px above the box. Back along the vector, that corner touches the edge.
+    const head = container.querySelector('path.v-head');
+    expect(head?.getAttribute('d')).toBe('M249.13,3.27 L240.48,7.97 L239.84,0 Z');
+    const corners = [...(head?.getAttribute('d') ?? '').matchAll(/(-?[\d.]+),(-?[\d.]+)/g)]
+      .map((match) => [Number(match[1]), Number(match[2])]);
+    expect(corners).toHaveLength(3);
+    for (const [x, y] of corners) {
+      expect(x).toBeGreaterThanOrEqual(0);
+      expect(x).toBeLessThanOrEqual(400);
+      expect(y).toBeGreaterThanOrEqual(0);
+      expect(y).toBeLessThanOrEqual(400);
+    }
+    expect(head).toHaveAttribute('data-clipped', 'true');
+    expect(container.querySelector('line.v')).toHaveAttribute('data-clipped', 'true');
+  });
+
+  it('draws nothing for an arrow that lies along an edge, where no head fits inside', () => {
+    const { container } = render(
+      <svg>
+        <VectorArrow scales={scales} from={[5, 0]} to={[5, 3]} color="red" className="v" within={{ x: [-5, 5], y: [-5, 5] }} />
+      </svg>,
+    );
+    expect(container.querySelector('line')).toBeNull();
+    expect(container.querySelector('path')).toBeNull();
+  });
+
   it('marks nothing as clipped when the vector ends inside the box', () => {
     const { container } = render(
       <svg>
