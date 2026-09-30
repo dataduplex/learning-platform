@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { Plot, createScales, pixel, polylinePoints } from './Plot';
+import { Plot, createScales, decadeLabel, pixel, plotPadding, polylinePoints } from './Plot';
 
 const BOX = { left: 40, top: 20, width: 300, height: 200 };
 
@@ -125,5 +125,76 @@ describe('Plot', () => {
     for (const line of horizontal) {
       expect(line.getAttribute('y1')).toBe(line.getAttribute('y2'));
     }
+  });
+});
+
+describe('Plot axes', () => {
+  const ticks = [{ at: 0, label: '0' }, { at: 5, label: '5' }, { at: 10, label: '10' }];
+
+  it('sets x tick values on a row 16px below the data box', () => {
+    render(<Plot title="p" xDomain={[0, 10]} yDomain={[0, 1]} width={400} height={300} xTicks={ticks} />);
+    const labels = [...document.querySelectorAll('.plot-tick[data-axis="x"]')];
+    expect(labels.map((label) => label.textContent)).toEqual(['0', '5', '10']);
+    expect(labels.map((label) => label.getAttribute('x'))).toEqual(['36', '200', '364']);
+    for (const label of labels) expect(label).toHaveAttribute('y', '280');
+  });
+
+  it('gives the x title its own row, a full 22px below the tick values', () => {
+    render(
+      <Plot title="p" xDomain={[0, 10]} yDomain={[0, 1]} width={400} height={300} xTicks={ticks} xLabel="step" />,
+    );
+    // Ticks and a title need 48px below the data box, so the box ends at 252.
+    expect(document.querySelector('.plot-tick[data-axis="x"]')).toHaveAttribute('y', '268');
+    expect(screen.getByText('step')).toHaveAttribute('y', '290');
+  });
+
+  it('lets the x title take the tick row when there are no tick values', () => {
+    render(<Plot title="p" xDomain={[0, 10]} yDomain={[0, 1]} width={400} height={300} xLabel="x" />);
+    expect(screen.getByText('x')).toHaveAttribute('y', '280');
+  });
+
+  it('right-aligns y tick values against the axis and moves the y title outside them', () => {
+    render(
+      <Plot
+        title="p" xDomain={[0, 1]} yDomain={[0, 1]} width={400} height={300}
+        yTicks={[{ at: 0, label: '0' }, { at: 1, label: '1' }]} yLabel="loss"
+      />,
+    );
+    const labels = [...document.querySelectorAll('.plot-tick[data-axis="y"]')];
+    expect(labels.map((label) => label.getAttribute('y'))).toEqual(['268', '40']);
+    for (const label of labels) {
+      expect(label).toHaveAttribute('x', '56');
+      expect(label).toHaveAttribute('text-anchor', 'end');
+    }
+    expect(screen.getByText('loss')).toHaveAttribute('x', '8');
+  });
+
+  it('frames its data box and marks it for geometry checks', () => {
+    render(
+      <Plot title="p" xDomain={[0, 1]} yDomain={[0.05, 0.95]} width={400} height={300} xTicks={ticks.slice(0, 1)} xLabel="t" />,
+    );
+    const frame = document.querySelector('rect.plot-frame[data-role="data-box"]');
+    expect(frame).toHaveAttribute('x', '36');
+    expect(frame).toHaveAttribute('y', '36');
+    expect(frame).toHaveAttribute('width', '328');
+    expect(frame).toHaveAttribute('height', '216');
+  });
+
+  it('sizes each side by what it draws, never below the base padding', () => {
+    expect(plotPadding({ xTicks: true, xLabel: true, yTicks: true, yLabel: true }))
+      .toEqual({ top: 36, right: 36, bottom: 48, left: 64 });
+    expect(plotPadding({ xTicks: false, xLabel: false, yTicks: false, yLabel: false }))
+      .toEqual({ top: 36, right: 36, bottom: 36, left: 36 });
+    expect(plotPadding({ xTicks: false, xLabel: true, yTicks: true, yLabel: false }, 10))
+      .toEqual({ top: 10, right: 10, bottom: 26, left: 48 });
+  });
+
+  it('writes a decade with a real superscript', () => {
+    render(<svg><text data-testid="decade">{decadeLabel(-4)}</text></svg>);
+    const text = screen.getByTestId('decade');
+    expect(text.textContent).toBe('10−4');
+    expect(text.querySelector('tspan')).toHaveAttribute('dy', '-4');
+    render(<svg><text data-testid="unit">{decadeLabel(0)}</text></svg>);
+    expect(screen.getByTestId('unit').textContent).toBe('1');
   });
 });

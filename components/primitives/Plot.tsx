@@ -82,6 +82,54 @@ export function polylinePoints(points: Iterable<readonly [number, number]>): str
   return parts.join(' ');
 }
 
+/** A labelled position on an axis, in data units. */
+export interface Tick {
+  readonly at: number;
+  readonly label: ReactNode;
+}
+
+/**
+ * Offsets from the data box, in pixels. The x title sits a full row below the tick
+ * values, so a centred title can never read as the middle tick's second line.
+ */
+export const PLOT_LAYOUT = {
+  tickRow: 16,
+  titleRow: 22,
+  yTickGap: 8,
+  /** Room for y tick text of up to six characters at 11px. */
+  yTickReserve: 36,
+} as const;
+
+export interface PlotPadding {
+  readonly top: number;
+  readonly right: number;
+  readonly bottom: number;
+  readonly left: number;
+}
+
+/** Each side grows by what it draws and never shrinks below the base padding. */
+export function plotPadding(
+  draws: { readonly xTicks: boolean; readonly xLabel: boolean; readonly yTicks: boolean; readonly yLabel: boolean },
+  base = 36,
+): PlotPadding {
+  const { tickRow, titleRow, yTickGap, yTickReserve } = PLOT_LAYOUT;
+  const bottom = draws.xTicks && draws.xLabel ? tickRow + titleRow + 10
+    : draws.xTicks || draws.xLabel ? tickRow + 10 : 0;
+  const left = draws.yTicks ? yTickGap + yTickReserve + (draws.yLabel ? 20 : 4)
+    : draws.yLabel ? 28 : 0;
+  return { top: base, right: base, bottom: Math.max(base, bottom), left: Math.max(base, left) };
+}
+
+/** Ten to a power, for a log axis. The zeroth power writes 1. */
+export function decadeLabel(exponent: number): ReactNode {
+  if (exponent === 0) return '1';
+  return (
+    <>
+      10<tspan dy="-4" fontSize="8">{exponent < 0 ? `−${-exponent}` : String(exponent)}</tspan>
+    </>
+  );
+}
+
 /** Multiples of `step` inside the closed domain. */
 function ticksFor(domain: readonly [number, number], step: number): number[] {
   const [low, high] = domain;
@@ -113,6 +161,8 @@ export interface PlotProps {
   gridStep?: number;
   gridAxis?: GridAxis;
   aspect?: Aspect;
+  xTicks?: readonly Tick[];
+  yTicks?: readonly Tick[];
   xLabel?: string;
   yLabel?: string;
   children?: (scales: PlotScales) => ReactNode;
@@ -129,22 +179,34 @@ export function Plot({
   gridStep,
   gridAxis = 'both',
   aspect = 'fill',
+  xTicks,
+  yTicks,
   xLabel,
   yLabel,
   children,
 }: PlotProps) {
   const id = useId();
+  const hasXTicks = (xTicks?.length ?? 0) > 0;
+  const hasYTicks = (yTicks?.length ?? 0) > 0;
+  const pad = plotPadding(
+    { xTicks: hasXTicks, xLabel: xLabel !== undefined, yTicks: hasYTicks, yLabel: yLabel !== undefined },
+    padding,
+  );
   const box: Box = {
-    left: padding,
-    top: padding,
-    width: width - padding * 2,
-    height: height - padding * 2,
+    left: pad.left,
+    top: pad.top,
+    width: width - pad.left - pad.right,
+    height: height - pad.top - pad.bottom,
   };
   const scales = createScales(xDomain, yDomain, box, aspect);
   const { inner } = scales;
+  const bottom = inner.top + inner.height;
+  const { tickRow, titleRow, yTickGap, yTickReserve } = PLOT_LAYOUT;
+  const yTitleX = pixel(inner.left - (hasYTicks ? yTickGap + yTickReserve + 12 : 20));
+  const yTitleY = pixel(inner.top + inner.height / 2);
 
-  const xTicks = gridStep === undefined || gridAxis === 'y' ? [] : ticksFor(xDomain, gridStep);
-  const yTicks = gridStep === undefined || gridAxis === 'x' ? [] : ticksFor(yDomain, gridStep);
+  const xGridTicks = gridStep === undefined || gridAxis === 'y' ? [] : ticksFor(xDomain, gridStep);
+  const yGridTicks = gridStep === undefined || gridAxis === 'x' ? [] : ticksFor(yDomain, gridStep);
   const showZeroX = xDomain[0] <= 0 && 0 <= xDomain[1];
   const showZeroY = yDomain[0] <= 0 && 0 <= yDomain[1];
 
@@ -161,7 +223,16 @@ export function Plot({
       <title id={`${id}-title`}>{title}</title>
       {description === undefined ? null : <desc id={`${id}-desc`}>{description}</desc>}
 
-      {xTicks.filter((tick) => tick !== 0 || !showZeroX).map((tick) => (
+      <rect
+        className="plot-frame"
+        data-role="data-box"
+        x={pixel(inner.left)}
+        y={pixel(inner.top)}
+        width={pixel(inner.width)}
+        height={pixel(inner.height)}
+      />
+
+      {xGridTicks.filter((tick) => tick !== 0 || !showZeroX).map((tick) => (
         <line
           key={`vx-${tick}`}
           data-role="gridline"
@@ -172,7 +243,7 @@ export function Plot({
           y2={inner.top + inner.height}
         />
       ))}
-      {yTicks.filter((tick) => tick !== 0 || !showZeroY).map((tick) => (
+      {yGridTicks.filter((tick) => tick !== 0 || !showZeroY).map((tick) => (
         <line
           key={`hy-${tick}`}
           data-role="gridline"
@@ -205,18 +276,50 @@ export function Plot({
         />
       ) : null}
 
+      {xTicks?.map((tick) => (
+        <text
+          key={`xt-${tick.at}`}
+          className="plot-tick"
+          data-axis="x"
+          x={pixel(scales.x(tick.at))}
+          y={pixel(bottom + tickRow)}
+          textAnchor="middle"
+        >
+          {tick.label}
+        </text>
+      ))}
+      {yTicks?.map((tick) => (
+        <text
+          key={`yt-${tick.at}`}
+          className="plot-tick"
+          data-axis="y"
+          x={pixel(inner.left - yTickGap)}
+          y={pixel(scales.y(tick.at) + 4)}
+          textAnchor="end"
+        >
+          {tick.label}
+        </text>
+      ))}
+
       {xLabel === undefined ? null : (
-        <text className="plot-axis-label" x={inner.left + inner.width / 2} y={height - 6} textAnchor="middle">
+        <text
+          className="plot-axis-label"
+          data-axis="x"
+          x={pixel(inner.left + inner.width / 2)}
+          y={pixel(bottom + (hasXTicks ? tickRow + titleRow : tickRow))}
+          textAnchor="middle"
+        >
           {xLabel}
         </text>
       )}
       {yLabel === undefined ? null : (
         <text
           className="plot-axis-label"
-          x={12}
-          y={inner.top + inner.height / 2}
+          data-axis="y"
+          x={yTitleX}
+          y={yTitleY}
           textAnchor="middle"
-          transform={`rotate(-90 12 ${inner.top + inner.height / 2})`}
+          transform={`rotate(-90 ${yTitleX} ${yTitleY})`}
         >
           {yLabel}
         </text>
