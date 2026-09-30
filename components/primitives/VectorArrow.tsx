@@ -1,6 +1,6 @@
 'use client';
 
-import { clipRay, type Domain2 } from '@/lib/linalg';
+import { clipRay, type Domain2, type Point2D } from '@/lib/linalg';
 import { pixel, type PlotScales } from './Plot';
 
 export const HEAD_LENGTH = 9;
@@ -59,22 +59,26 @@ function reachInside(
   return high >= low ? high : null;
 }
 
+/** Where VectorArrow draws a vector, in pixels: its tail, its drawn tip and its direction. */
+export interface ArrowGeometry {
+  readonly x0: number;
+  readonly y0: number;
+  readonly x1: number;
+  readonly y1: number;
+  readonly ux: number;
+  readonly uy: number;
+  readonly length: number;
+  /** The drawn tip falls short of the vector's own. */
+  readonly clipped: boolean;
+}
+
 /**
- * A vector from tail to tip, with a drawn head so its direction never has to be guessed.
- * Drawn `within` a box, the tip moves back along the vector until the tip and the head's
- * corners lie inside the box, and an arrow whose head cannot fit there is not drawn.
+ * The arrow VectorArrow draws for a vector, or null when it draws nothing. Drawn `within` a
+ * box, the tip moves back along the vector until the tip and the head's corners lie inside it.
  */
-export function VectorArrow({
-  scales, from, to, color, className, dashed = false, within,
-}: {
-  scales: PlotScales;
-  from: readonly [number, number];
-  to: readonly [number, number];
-  color: string;
-  className: string;
-  dashed?: boolean;
-  within?: Domain2;
-}) {
+export function arrowGeometry(
+  scales: PlotScales, from: Point2D, to: Point2D, within?: Domain2,
+): ArrowGeometry | null {
   const ray = within === undefined ? { point: to, clipped: false } : clipRay(from, to, within);
   const x0 = scales.x(from[0]);
   const y0 = scales.y(from[1]);
@@ -86,13 +90,58 @@ export function VectorArrow({
   const uy = (fullY - y0) / full;
   const length = within === undefined ? full : reachInside(x0, y0, ux, uy, full, pixelBox(scales, within));
   if (length === null || length < 1) return null;
-  const x1 = length === full ? fullX : x0 + ux * length;
-  const y1 = length === full ? fullY : y0 + uy * length;
+  return {
+    x0,
+    y0,
+    x1: length === full ? fullX : x0 + ux * length,
+    y1: length === full ? fullY : y0 + uy * length,
+    ux,
+    uy,
+    length,
+    clipped: ray.clipped || length < full,
+  };
+}
+
+/** A straight mark in drawn pixels. */
+export interface Segment {
+  readonly x1: number;
+  readonly y1: number;
+  readonly x2: number;
+  readonly y2: number;
+  /** It stops where it leaves the box, short of the point it heads for. */
+  readonly clipped: boolean;
+}
+
+/** A segment from a point in the box toward another, cut where it leaves the box. Null under a pixel. */
+export function segmentWithin(scales: PlotScales, from: Point2D, to: Point2D, within: Domain2): Segment | null {
+  const { point, clipped } = clipRay(from, to, within);
+  const x1 = pixel(scales.x(from[0]));
+  const y1 = pixel(scales.y(from[1]));
+  const x2 = pixel(scales.x(point[0]));
+  const y2 = pixel(scales.y(point[1]));
+  return Math.hypot(x2 - x1, y2 - y1) < 1 ? null : { x1, y1, x2, y2, clipped };
+}
+
+/** A vector from tail to tip, with a drawn head so its direction never has to be guessed. */
+export function VectorArrow({
+  scales, from, to, color, className, dashed = false, within,
+}: {
+  scales: PlotScales;
+  from: Point2D;
+  to: Point2D;
+  color: string;
+  className: string;
+  dashed?: boolean;
+  within?: Domain2;
+}) {
+  const geometry = arrowGeometry(scales, from, to, within);
+  if (geometry === null) return null;
+  const { x0, y0, x1, y1, ux, uy, length, clipped } = geometry;
   const head = Math.min(HEAD_LENGTH, length);
   const baseX = x1 - ux * head;
   const baseY = y1 - uy * head;
   const half = HEAD_HALF_WIDTH * (head / HEAD_LENGTH);
-  const marked = ray.clipped || length < full ? { 'data-clipped': 'true' } : {};
+  const marked = clipped ? { 'data-clipped': 'true' } : {};
   return (
     <>
       <line

@@ -1,6 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { Plot, createScales, decadeLabel, pixel, plotPadding, polylinePoints } from './Plot';
+import {
+  CHART_WIDTH, Plot, createScales, decadeLabel, pixel, plotPadding, plotScales, polylinePoints, wholeTicks,
+  type PlotLayout,
+} from './Plot';
 
 const BOX = { left: 40, top: 20, width: 300, height: 200 };
 
@@ -196,5 +199,43 @@ describe('Plot axes', () => {
     expect(text.querySelector('tspan')).toHaveAttribute('dy', '-4');
     render(<svg><text data-testid="unit">{decadeLabel(0)}</text></svg>);
     expect(screen.getByTestId('unit').textContent).toBe('1');
+  });
+});
+
+describe('plotScales', () => {
+  const plane: PlotLayout = {
+    xDomain: [-6, 6], yDomain: [-6, 6], aspect: 'equal', width: CHART_WIDTH, height: 420,
+    xTicks: wholeTicks([-6, 6], 2), yTicks: wholeTicks([-6, 6], 2),
+  };
+
+  it('gives the scales Plot draws with, from the same props', () => {
+    const layouts: readonly PlotLayout[] = [
+      plane,
+      { xDomain: [0, 10], yDomain: [0, 1], width: 400, height: 300, xLabel: 't', yTicks: [{ at: 0, label: '0' }] },
+      { xDomain: [0, 1], yDomain: [0, 1] },
+    ];
+    for (const layout of layouts) {
+      const { inner } = plotScales(layout);
+      const { unmount } = render(<Plot title="p" {...layout} />);
+      const frame = document.querySelector('rect[data-role="data-box"]');
+      expect(['x', 'y', 'width', 'height'].map((name) => frame?.getAttribute(name)))
+        .toEqual([inner.left, inner.top, inner.width, inner.height].map((value) => String(pixel(value))));
+      unmount();
+    }
+  });
+
+  it('lays a vector plane out as a 348px square beside its tick values', () => {
+    expect(plotScales(plane).inner).toEqual({ left: 131, top: 36, width: 348, height: 348 });
+  });
+});
+
+describe('wholeTicks', () => {
+  it('puts a tick at each multiple of the step inside the domain, labelled as a whole number', () => {
+    expect(wholeTicks([-5, 5], 2)).toEqual([-4, -2, 0, 2, 4].map((at) => ({ at, label: String(at) })));
+    expect(wholeTicks([-6, 6], 2).map((tick) => tick.label)).toEqual(['-6', '-4', '-2', '0', '2', '4', '6']);
+  });
+
+  it('refuses a step that is not a whole number, whose labels would round', () => {
+    expect(() => wholeTicks([0, 1], 0.5)).toThrow(RangeError);
   });
 });

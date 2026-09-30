@@ -1,6 +1,7 @@
 'use client';
 
 import { useId, type ReactNode } from 'react';
+import { formatFixed } from './NumberReadout';
 
 /** The shared size of a data chart: the widget card's content width, at the old 480 by 300 aspect. */
 export const CHART_WIDTH = 598;
@@ -146,6 +147,14 @@ function ticksFor(domain: readonly [number, number], step: number): number[] {
   return ticks;
 }
 
+/** A tick at each multiple of a whole-number `step` inside the domain, labelled as a whole number. */
+export function wholeTicks(domain: readonly [number, number], step: number): Tick[] {
+  if (!Number.isInteger(step) || step <= 0) {
+    throw new RangeError(`Whole-number ticks need a positive whole step, not ${step}.`);
+  }
+  return ticksFor(domain, step).map((at) => ({ at, label: formatFixed(at, 0) }));
+}
+
 /**
  * Which axes `gridStep` applies to. One spacing cannot serve two axes measured in
  * different units, as on a density plotted against its variable.
@@ -172,28 +181,35 @@ export interface PlotProps {
   children?: (scales: PlotScales) => ReactNode;
 }
 
-export function Plot({
-  title,
-  description,
+/** The props that decide where a Plot puts its data. */
+export type PlotLayout = Pick<
+  PlotProps,
+  'xDomain' | 'yDomain' | 'width' | 'height' | 'padding' | 'aspect' | 'xTicks' | 'yTicks' | 'xLabel' | 'yLabel'
+>;
+
+const DEFAULT_WIDTH = 420;
+const DEFAULT_HEIGHT = 360;
+
+/** The scales a Plot with this layout draws with. */
+export function plotScales({
   xDomain,
   yDomain,
-  width = 420,
-  height = 360,
+  width = DEFAULT_WIDTH,
+  height = DEFAULT_HEIGHT,
   padding = 36,
-  gridStep,
-  gridAxis = 'both',
   aspect = 'fill',
   xTicks,
   yTicks,
   xLabel,
   yLabel,
-  children,
-}: PlotProps) {
-  const id = useId();
-  const hasXTicks = (xTicks?.length ?? 0) > 0;
-  const hasYTicks = (yTicks?.length ?? 0) > 0;
+}: PlotLayout): PlotScales {
   const pad = plotPadding(
-    { xTicks: hasXTicks, xLabel: xLabel !== undefined, yTicks: hasYTicks, yLabel: yLabel !== undefined },
+    {
+      xTicks: (xTicks?.length ?? 0) > 0,
+      xLabel: xLabel !== undefined,
+      yTicks: (yTicks?.length ?? 0) > 0,
+      yLabel: yLabel !== undefined,
+    },
     padding,
   );
   const box: Box = {
@@ -202,7 +218,29 @@ export function Plot({
     width: width - pad.left - pad.right,
     height: height - pad.top - pad.bottom,
   };
-  const scales = createScales(xDomain, yDomain, box, aspect);
+  return createScales(xDomain, yDomain, box, aspect);
+}
+
+export function Plot(props: PlotProps) {
+  const {
+    title,
+    description,
+    xDomain,
+    yDomain,
+    width = DEFAULT_WIDTH,
+    height = DEFAULT_HEIGHT,
+    gridStep,
+    gridAxis = 'both',
+    xTicks,
+    yTicks,
+    xLabel,
+    yLabel,
+    children,
+  } = props;
+  const id = useId();
+  const hasXTicks = (xTicks?.length ?? 0) > 0;
+  const hasYTicks = (yTicks?.length ?? 0) > 0;
+  const scales = plotScales(props);
   const { inner } = scales;
   const bottom = inner.top + inner.height;
   const { tickRow, titleRow, yTickGap, yTickReserve } = PLOT_LAYOUT;

@@ -1,7 +1,8 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { createScales } from './Plot';
-import { VectorArrow } from './VectorArrow';
+import { expectInside, pathPoints } from '@/test/render';
+import { createScales, pixel } from './Plot';
+import { VectorArrow, arrowGeometry, segmentWithin } from './VectorArrow';
 
 const scales = createScales([-5, 5], [-5, 5], { left: 0, top: 0, width: 400, height: 400 }, 'equal');
 
@@ -41,15 +42,9 @@ describe('VectorArrow', () => {
     // would sit 3.27px above the box. Back along the vector, that corner touches the edge.
     const head = container.querySelector('path.v-head');
     expect(head?.getAttribute('d')).toBe('M249.13,3.27 L240.48,7.97 L239.84,0 Z');
-    const corners = [...(head?.getAttribute('d') ?? '').matchAll(/(-?[\d.]+),(-?[\d.]+)/g)]
-      .map((match) => [Number(match[1]), Number(match[2])]);
+    const corners = pathPoints(head);
     expect(corners).toHaveLength(3);
-    for (const [x, y] of corners) {
-      expect(x).toBeGreaterThanOrEqual(0);
-      expect(x).toBeLessThanOrEqual(400);
-      expect(y).toBeGreaterThanOrEqual(0);
-      expect(y).toBeLessThanOrEqual(400);
-    }
+    expectInside(corners, { left: 0, top: 0, right: 400, bottom: 400 });
     expect(head).toHaveAttribute('data-clipped', 'true');
     expect(container.querySelector('line.v')).toHaveAttribute('data-clipped', 'true');
   });
@@ -73,5 +68,39 @@ describe('VectorArrow', () => {
     expect(container.querySelector('path.v-head')?.getAttribute('d')).toBe('M360,200 L351,204 L351,196 Z');
     expect(container.querySelector('line.v')).not.toHaveAttribute('data-clipped');
     expect(container.querySelector('path.v-head')).not.toHaveAttribute('data-clipped');
+  });
+});
+
+describe('arrowGeometry', () => {
+  const box = { x: [-5, 5], y: [-5, 5] } as const;
+
+  it('reports the tip VectorArrow draws, so a caller can say what the plot shows', () => {
+    const geometry = arrowGeometry(scales, [-4, 4.5], [6, 5.3], box);
+    const { container } = render(
+      <svg><VectorArrow scales={scales} from={[-4, 4.5]} to={[6, 5.3]} color="red" className="v" within={box} /></svg>,
+    );
+    expect(geometry?.clipped).toBe(true);
+    expect(container.querySelector('path.v-head')?.getAttribute('d'))
+      .toMatch(new RegExp(`^M${pixel(geometry?.x1 ?? NaN)},${pixel(geometry?.y1 ?? NaN)} `));
+  });
+
+  it('is null exactly when VectorArrow draws nothing', () => {
+    expect(arrowGeometry(scales, [5, 0], [5, 3], box)).toBeNull();
+    expect(arrowGeometry(scales, [0, 0], [0.001, 0])).toBeNull();
+    expect(arrowGeometry(scales, [0, 0], [4, 0], box)?.clipped).toBe(false);
+  });
+});
+
+describe('segmentWithin', () => {
+  const box = { x: [-5, 5], y: [-5, 5] } as const;
+
+  it('cuts a segment where it leaves the box, in drawn pixels', () => {
+    expect(segmentWithin(scales, [0, 0], [10, 0], box)).toEqual({ x1: 200, y1: 200, x2: 400, y2: 200, clipped: true });
+    expect(segmentWithin(scales, [0, 0], [1, 1], box)).toEqual({ x1: 200, y1: 200, x2: 240, y2: 160, clipped: false });
+  });
+
+  it('is null when less than a pixel of it is left inside', () => {
+    expect(segmentWithin(scales, [5, 0], [6, 1], box)).toBeNull();
+    expect(segmentWithin(scales, [1, 1], [1, 1], box)).toBeNull();
   });
 });
