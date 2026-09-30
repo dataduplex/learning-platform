@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { contourSegments, evenLevels, type Domain, type Segment } from '@/lib/calculus/contour';
 import type { Field2 } from '@/lib/calculus/gradient';
-import { ordinalScale } from '@/lib/palette';
+import { contourScale } from '@/lib/palette';
 import { useResolvedMode } from '@/lib/theme-client';
 import type { PlotScales } from './Plot';
 
@@ -31,7 +31,7 @@ export function ContourField({
   const contours = useMemo(() => {
     const chosen = levels ?? evenLevels(f, domain, levelCount, resolution);
     const sorted = [...chosen].sort((a, b) => a - b);
-    const colors = ordinalScale(sorted.length, mode);
+    const colors = contourScale(sorted.length, mode);
     return chosen.map((level) => ({
       level,
       color: colors[sorted.indexOf(level)] as string,

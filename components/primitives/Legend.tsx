@@ -6,6 +6,7 @@ export interface LegendItem {
   label: string;
   /** A CSS color, normally a var(--series-N) from lib/palette.ts. */
   color: string;
+  kind?: 'swatch' | 'line' | 'dashed';
 }
 
 /**
@@ -23,7 +24,15 @@ export function Legend({ items, label }: { items: readonly LegendItem[]; label?:
       <ul className="legend" {...(label === undefined ? {} : { 'aria-labelledby': `${id}-label` })}>
         {items.map((item) => (
           <li className="legend-item" key={item.label}>
-            <span className="legend-swatch" aria-hidden="true" style={{ background: item.color }} />
+            {item.kind === 'dashed' ? (
+              <span className="legend-dashed" aria-hidden="true" style={{ borderColor: item.color }} />
+            ) : (
+              <span
+                className={item.kind === 'line' ? 'legend-line' : 'legend-swatch'}
+                aria-hidden="true"
+                style={{ background: item.color }}
+              />
+            )}
             <span className="legend-text">{item.label}</span>
           </li>
         ))}

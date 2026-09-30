@@ -1,7 +1,7 @@
 // components/primitives/ContourField.test.tsx
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { SEQUENTIAL_BLUE } from '@/lib/palette';
+import { contourScale } from '@/lib/palette';
 import { ContourField } from './ContourField';
 import { createScales } from './Plot';
 
@@ -51,7 +51,7 @@ describe('ContourField', () => {
 
   it('takes its colour from the shared sequential ramp, not from a local literal', () => {
     const { container } = renderField({ levels: [1, 4] });
-    const ramp: readonly string[] = SEQUENTIAL_BLUE;
+    const ramp = contourScale(2, 'light');
     const strokes = [...container.querySelectorAll('path.contour-line')]
       .map((path) => path.getAttribute('stroke') ?? '');
     expect(strokes).toHaveLength(2);

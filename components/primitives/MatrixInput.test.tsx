@@ -57,4 +57,33 @@ describe('MatrixInput', () => {
     render(<MatrixInput label="A" value={matFrom([[1]])} onChange={() => {}} />);
     expect(screen.getByRole('group', { name: /A, 1 by 1/ })).toBeInTheDocument();
   });
+
+  it('renders a visible caption when given', () => {
+    render(<MatrixInput label="A" value={matFrom([[1]])} onChange={() => {}} caption="Logits" />);
+    expect(screen.getByText('Logits')).toBeInTheDocument();
+    expect(screen.getByText('Logits')).toHaveClass('matrix-input-caption');
+  });
+
+  it('names cells by column label when given', () => {
+    render(
+      <MatrixInput
+        label="Logits"
+        value={matFrom([[0.5, 0.3]])}
+        onChange={() => {}}
+        columnLabels={['mat', 'floor']}
+      />,
+    );
+    expect(screen.getByLabelText('Logits mat')).toHaveValue(0.5);
+    expect(screen.getByLabelText('Logits floor')).toHaveValue(0.3);
+  });
+
+  it('clamps typed values to the min and max', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<MatrixInput label="A" value={matFrom([[0]])} onChange={onChange} min={0} max={1} />);
+    const cell = screen.getByLabelText('A row 1 column 1');
+    await user.clear(cell);
+    await user.type(cell, '5');
+    expect(toRows(onChange.mock.calls.at(-1)?.[0])).toEqual([[1]]);
+  });
 });

@@ -2,6 +2,7 @@
 
 import { useId } from 'react';
 import { at, type Mat } from '@/lib/linalg';
+import { inkOn } from '@/lib/palette';
 import { formatFixed } from './NumberReadout';
 import { TableView } from './TableView';
 
@@ -104,17 +105,21 @@ export function Heatmap({
         )}
 
         {showValues && Array.from({ length: matrix.rows }).flatMap((_, row) =>
-          Array.from({ length: matrix.cols }).map((__, col) => (
-            <text
-              key={`v-${row}-${col}`}
-              className="heatmap-value"
-              x={gutterLeft + col * cellSize + cellSize / 2}
-              y={gutterTop + row * cellSize + cellSize / 2 + 4}
-              textAnchor="middle"
-            >
-              {formatFixed(at(matrix, row, col), digits)}
-            </text>
-          )),
+          Array.from({ length: matrix.cols }).map((__, col) => {
+            const value = at(matrix, row, col);
+            return (
+              <text
+                key={`v-${row}-${col}`}
+                className="heatmap-value"
+                x={gutterLeft + col * cellSize + cellSize / 2}
+                y={gutterTop + row * cellSize + cellSize / 2 + 4}
+                textAnchor="middle"
+                fill={inkOn(colorFor(value))}
+              >
+                {formatFixed(value, digits)}
+              </text>
+            );
+          }),
         )}
       </svg>
       <figcaption className="heatmap-caption">{caption}</figcaption>

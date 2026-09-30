@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ALL_PAIRS_SERIES_CAP, DIVERGING_MID, SEQUENTIAL_BLUE, SERIES,
-  divergingScale, ordinalScale, sequentialScale, seriesVar, statusVar,
+  contourScale, contrastRatio, divergingScale, inkOn, oklabLightness, sequentialScale, seriesVar, statusVar,
 } from './palette';
 
 describe('palette constants', () => {
@@ -95,7 +95,9 @@ describe('divergingScale', () => {
   it('sends negative values cool and positive values warm', () => {
     const scale = divergingScale(-4, 4, 'light');
     expect(scale(-4)).toBe(SEQUENTIAL_BLUE[12]);
-    expect(scale(4)).toBe(SERIES.light[7]);
+    const warmPole = scale(4);
+    const [r, g, b] = [1, 3, 5].map((i) => Number.parseInt(warmPole.slice(i, i + 2), 16)) as [number, number, number];
+    expect(r).toBeGreaterThan(Math.max(g, b));
   });
 
   it('gives both arms the same number of steps', () => {
@@ -103,14 +105,6 @@ describe('divergingScale', () => {
     const cool = new Set([0.05, 0.2, 0.4, 0.6, 0.8, 1].map((t) => scale(-t)));
     const warm = new Set([0.05, 0.2, 0.4, 0.6, 0.8, 1].map((t) => scale(t)));
     expect(cool.size).toBe(warm.size);
-  });
-
-  it('is symmetric in magnitude: equal distance from zero means equal saturation', () => {
-    const scale = divergingScale(-5, 5, 'light');
-    const coolSteps = [1, 2, 3, 4, 5].map((v) => scale(-v));
-    const warmSteps = [1, 2, 3, 4, 5].map((v) => scale(v));
-    expect(new Set(coolSteps).size).toBe(5);
-    expect(new Set(warmSteps).size).toBe(5);
   });
 
   it('rejects a domain that does not contain zero', () => {
@@ -135,28 +129,45 @@ describe('divergingScale', () => {
   });
 });
 
-describe('ordinalScale', () => {
-  it('never starts lighter than step 250 on the light surface', () => {
-    // Steps 100 through 200 are below 2:1 against #fcfcfb, so ordinal marks
-    // would recede into the surface.
-    for (const color of ordinalScale(4, 'light')) {
-      expect(SEQUENTIAL_BLUE.indexOf(color as typeof SEQUENTIAL_BLUE[number])).toBeGreaterThanOrEqual(3);
+describe('diverging arms', () => {
+  it('match in lightness step for step, so equal magnitudes look equally strong', () => {
+    for (const mode of ['light', 'dark'] as const) {
+      const scale = divergingScale(-6, 6, mode);
+      for (let v = 1; v <= 6; v += 1) {
+        expect(Math.abs(oklabLightness(scale(v)) - oklabLightness(scale(-v)))).toBeLessThan(0.02);
+      }
     }
   });
 
-  it('never goes darker than step 600 on the dark surface', () => {
-    for (const color of ordinalScale(4, 'dark')) {
-      expect(SEQUENTIAL_BLUE.indexOf(color as typeof SEQUENTIAL_BLUE[number])).toBeLessThanOrEqual(10);
+  it('keep zero at the neutral midpoint', () => {
+    expect(divergingScale(-1, 1, 'light')(0)).toBe(DIVERGING_MID.light);
+  });
+});
+
+describe('contourScale', () => {
+  it('keeps every level at least 3:1 against the surface, lowest level strongest', () => {
+    for (const [mode, surface] of [['light', '#fcfcfb'], ['dark', '#1a1a19']] as const) {
+      const levels = contourScale(7, mode);
+      const contrasts = levels.map((color) => contrastRatio(color, surface));
+      for (const value of contrasts) expect(value).toBeGreaterThanOrEqual(3);
+      for (let i = 1; i < contrasts.length; i += 1) {
+        expect(contrasts[i] as number).toBeLessThan(contrasts[i - 1] as number);
+      }
     }
   });
 
-  it('returns the requested count, all distinct', () => {
-    const colors = ordinalScale(5, 'light');
-    expect(colors).toHaveLength(5);
-    expect(new Set(colors).size).toBe(5);
+  it('is neutral, so a coloured path is never lost in it', () => {
+    for (const color of contourScale(7, 'light')) {
+      const [r, g, b] = [1, 3, 5].map((i) => Number.parseInt(color.slice(i, i + 2), 16));
+      expect(Math.max(r as number, g as number, b as number) - Math.min(r as number, g as number, b as number)).toBeLessThanOrEqual(2);
+    }
   });
+});
 
-  it('rejects a count it cannot fill distinctly', () => {
-    expect(() => ordinalScale(20, 'light')).toThrow(RangeError);
+describe('inkOn', () => {
+  it('picks whichever ink reads better on the fill', () => {
+    expect(inkOn('#0d366b')).toBe('#ffffff');
+    expect(inkOn('#cde2fb')).toBe('#0b0b0b');
+    expect(contrastRatio('#ffffff', '#000000')).toBeCloseTo(21, 6);
   });
 });

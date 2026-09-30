@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { matFrom } from '@/lib/linalg';
-import { DIVERGING_MID, divergingScale } from '@/lib/palette';
+import { DIVERGING_MID, SEQUENTIAL_BLUE, divergingScale, inkOn } from '@/lib/palette';
 import { Heatmap } from './Heatmap';
 
 const matrix = matFrom([[-1, 0], [2, 5]]);
@@ -70,5 +70,22 @@ describe('Heatmap', () => {
     render(<Heatmap matrix={matrix} colorFor={colorFor} caption="c" showValues digits={1} />);
     const values = [...document.querySelectorAll('.heatmap-value')].map((n) => n.textContent);
     expect(values).toEqual(['-1.0', '0.0', '2.0', '5.0']);
+  });
+
+  it('wears ink that reads well on its fill, so no halo is needed', () => {
+    const darkCell = matFrom([[1]]);
+    const darkColor = SEQUENTIAL_BLUE[12] as string;
+    render(
+      <Heatmap
+        matrix={darkCell}
+        colorFor={() => darkColor}
+        caption="c"
+        showValues
+      />,
+    );
+    const cell = document.querySelector('[data-role="cell"]');
+    const value = document.querySelector('.heatmap-value');
+    expect(cell).toHaveAttribute('fill', darkColor);
+    expect(value).toHaveAttribute('fill', inkOn(darkColor));
   });
 });
