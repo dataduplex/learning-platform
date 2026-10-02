@@ -38,6 +38,30 @@ describe('Heatmap', () => {
     expect(labels).toEqual(['k1', 'k2', 'q1', 'q2']);
   });
 
+  it('leaves room for one glyph beside one-glyph row labels', () => {
+    const tall = matFrom(Array.from({ length: 8 }, () => [0, 0, 0, 0, 0, 0]));
+    render(
+      <Heatmap
+        matrix={tall}
+        colorFor={colorFor}
+        caption="c"
+        cellSize={26}
+        rowLabels={['1', '2', '3', '4', '5', '6', '7', '8']}
+      />,
+    );
+    // 8 of edge, 6 for the glyph and 10 to the grid, then 6 columns of 26 and 8 of edge.
+    expect(document.querySelector('.heatmap-svg')).toHaveAttribute('width', '188');
+    expect(document.querySelector('.heatmap-label')).toHaveAttribute('x', '14');
+    expect(document.querySelector('[data-role="cell"]')).toHaveAttribute('x', '25');
+  });
+
+  it('sizes the row-label gutter to its longest label', () => {
+    render(<Heatmap matrix={matrix} colorFor={colorFor} caption="c" rowLabels={['q1', 'q10']} />);
+    // 8 of edge, 3 glyphs of 6 and 10 to the grid, then 2 columns of 34 and 8 of edge.
+    expect(document.querySelector('.heatmap-svg')).toHaveAttribute('width', '112');
+    expect(document.querySelector('.heatmap-label')).toHaveAttribute('x', '26');
+  });
+
   it('always ships the table view, so the numbers are reachable without color', async () => {
     const user = userEvent.setup();
     render(<Heatmap matrix={matrix} colorFor={colorFor} caption="Attention weights" />);

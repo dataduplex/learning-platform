@@ -12,6 +12,18 @@ export interface ActiveCell {
   value: number;
 }
 
+/** In pixels: the surface left around the grid and its labels. */
+const EDGE = 8;
+/** In pixels: from a row label's end to the grid. */
+const LABEL_GAP = 10;
+/** In pixels: an average glyph of the 11px label font. A wider glyph eats into the edge. */
+const LABEL_GLYPH = 6;
+
+function rowLabelGutter(labels: readonly string[]): number {
+  const glyphs = Math.max(0, ...labels.map((label) => Array.from(label).length));
+  return EDGE + glyphs * LABEL_GLYPH + LABEL_GAP;
+}
+
 export function Heatmap({
   matrix,
   colorFor,
@@ -36,10 +48,10 @@ export function Heatmap({
   onActiveCell?: (cell: ActiveCell | null) => void;
 }) {
   const id = useId();
-  const gutterLeft = rowLabels ? 56 : 8;
-  const gutterTop = colLabels ? 22 : 8;
-  const width = gutterLeft + matrix.cols * cellSize + 8;
-  const height = gutterTop + matrix.rows * cellSize + 8;
+  const gutterLeft = rowLabels ? rowLabelGutter(rowLabels) : EDGE;
+  const gutterTop = colLabels ? 22 : EDGE;
+  const width = gutterLeft + matrix.cols * cellSize + EDGE;
+  const height = gutterTop + matrix.rows * cellSize + EDGE;
   // 2px of surface between fills, per the mark spec.
   const inset = 1;
 
@@ -76,7 +88,7 @@ export function Heatmap({
           <text
             key={`r-${row}`}
             className="heatmap-label"
-            x={gutterLeft - 10}
+            x={gutterLeft - LABEL_GAP}
             y={gutterTop + row * cellSize + cellSize / 2 + 4}
             textAnchor="end"
           >
