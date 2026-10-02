@@ -8,19 +8,35 @@ export const BAR_RADIUS = 4;
 /** Neighbouring histogram bins are separated by a gap in the surface colour. */
 export const BIN_GAP = 2;
 
+/**
+ * A bar in pixels whose length runs along `axis` from `from` to `to`, between `side0` and `side1`
+ * across it, rounded only at the end away from `from`.
+ */
+function barPath(axis: 'x' | 'y', side0: number, side1: number, from: number, to: number): string {
+  const s0 = pixel(side0);
+  const s1 = pixel(side1);
+  const base = pixel(from);
+  const tip = pixel(to);
+  const point = axis === 'y'
+    ? (across: number, along: number) => `${across},${along}`
+    : (across: number, along: number) => `${along},${across}`;
+  const r = pixel(Math.min(BAR_RADIUS, (s1 - s0) / 2, Math.abs(base - tip)));
+  if (r <= 0) return `M${point(s0, base)} L${point(s1, base)} L${point(s1, tip)} L${point(s0, tip)} Z`;
+  const inset = pixel(tip < base ? tip + r : tip - r);
+  // Trading x for y mirrors the outline, so the same corner turns the other way.
+  const sweep = (tip < base) === (axis === 'y') ? 1 : 0;
+  return `M${point(s0, base)} L${point(s0, inset)} A${r},${r} 0 0 ${sweep} ${point(pixel(s0 + r), tip)} `
+    + `L${point(pixel(s1 - r), tip)} A${r},${r} 0 0 ${sweep} ${point(s1, inset)} L${point(s1, base)} Z`;
+}
+
 /** A column from y0 to y1 in pixels, rounded only at the end away from y0. */
 function columnPath(left: number, right: number, y0: number, y1: number): string {
-  const x0 = pixel(left);
-  const x1 = pixel(right);
-  const base = pixel(y0);
-  const tip = pixel(y1);
-  const r = pixel(Math.min(BAR_RADIUS, (x1 - x0) / 2, Math.abs(base - tip)));
-  if (r <= 0) return `M${x0},${base} L${x1},${base} L${x1},${tip} L${x0},${tip} Z`;
-  const up = tip < base;
-  const inset = pixel(up ? tip + r : tip - r);
-  const sweep = up ? 1 : 0;
-  return `M${x0},${base} L${x0},${inset} A${r},${r} 0 0 ${sweep} ${pixel(x0 + r)},${tip} `
-    + `L${pixel(x1 - r)},${tip} A${r},${r} 0 0 ${sweep} ${x1},${inset} L${x1},${base} Z`;
+  return barPath('y', left, right, y0, y1);
+}
+
+/** A bar from x0 to x1 in pixels, rounded only at the end away from x0. */
+export function horizontalBarPath(top: number, bottom: number, x0: number, x1: number): string {
+  return barPath('x', top, bottom, x0, x1);
 }
 
 export function Bar({

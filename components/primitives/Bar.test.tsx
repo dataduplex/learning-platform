@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { Bar, Bin, BAR_MAX_WIDTH } from './Bar';
+import { Bar, Bin, BAR_MAX_WIDTH, horizontalBarPath } from './Bar';
 import { createScales } from './Plot';
 
 const scales = createScales([0.5, 5.5], [-1, 1], { left: 0, top: 0, width: 500, height: 200 }, 'fill');
@@ -51,6 +51,13 @@ describe('Bar', () => {
   it('draws a zero-height bar as a flat path, not NaN', () => {
     const { container } = render(<svg><Bar scales={scales} x={1} base={0} value={0} role="z" color="red" /></svg>);
     expect(container.querySelector('path')?.getAttribute('d')).not.toMatch(/NaN/);
+  });
+});
+
+describe('horizontalBarPath', () => {
+  it('rounds the end away from the base and keeps the base square', () => {
+    expect(horizontalBarPath(1, 11, 80, 100)).toBe('M80,1 L96,1 A4,4 0 0 1 100,5 L100,7 A4,4 0 0 1 96,11 L80,11 Z');
+    expect(horizontalBarPath(1, 11, 80, 60)).toBe('M80,1 L64,1 A4,4 0 0 0 60,5 L60,7 A4,4 0 0 0 64,11 L80,11 Z');
   });
 });
 
