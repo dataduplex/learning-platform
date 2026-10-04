@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { lineEnds } from '@/test/render';
 import {
   CHART_WIDTH, PROBABILITY_TICKS, Plot, createScales, decadeLabel, niceStep, pixel, plotPadding, plotScales, polylinePoints,
   stepTicks, wholeTicks,
@@ -129,6 +130,28 @@ describe('Plot', () => {
     for (const line of horizontal) {
       expect(line.getAttribute('y1')).toBe(line.getAttribute('y2'));
     }
+  });
+
+  it('spaces each axis by its own step when given one per axis', () => {
+    render(
+      <Plot
+        title="p"
+        xDomain={[-2, 2]}
+        yDomain={[-8, 8]}
+        width={420}
+        height={220}
+        padding={10}
+        gridStep={{ x: 1, y: 4 }}
+      />,
+    );
+    expect([...document.querySelectorAll('[data-role="gridline"]')].map(lineEnds)).toEqual([
+      ...['10', '110', '310', '410'].map((x) => [x, '10', x, '210']),
+      ...['210', '160', '60', '10'].map((y) => ['10', y, '410', y]),
+    ]);
+    expect([...document.querySelectorAll('[data-role="zero-axis"]')].map(lineEnds)).toEqual([
+      ['10', '110', '410', '110'],
+      ['210', '10', '210', '210'],
+    ]);
   });
 });
 

@@ -205,8 +205,8 @@ export interface PlotProps {
   width?: number;
   height?: number;
   padding?: number;
-  /** Gridline spacing in data units. Omit for no grid. */
-  gridStep?: number;
+  /** Gridline spacing in data units: one spacing, or `{ x, y }` to space each axis separately. Omit for no grid. */
+  gridStep?: number | { x: number; y: number };
   gridAxis?: GridAxis;
   aspect?: Aspect;
   xTicks?: readonly Tick[];
@@ -282,8 +282,10 @@ export function Plot(props: PlotProps) {
   const yTitleX = pixel(inner.left - (hasYTicks ? yTickGap + yTickReserve + 12 : 20));
   const yTitleY = pixel(inner.top + inner.height / 2);
 
-  const xGridTicks = gridStep === undefined || gridAxis === 'y' ? [] : ticksFor(xDomain, gridStep);
-  const yGridTicks = gridStep === undefined || gridAxis === 'x' ? [] : ticksFor(yDomain, gridStep);
+  const xGridStep = typeof gridStep === 'number' ? gridStep : gridStep?.x;
+  const yGridStep = typeof gridStep === 'number' ? gridStep : gridStep?.y;
+  const xGridTicks = xGridStep === undefined || gridAxis === 'y' ? [] : ticksFor(xDomain, xGridStep);
+  const yGridTicks = yGridStep === undefined || gridAxis === 'x' ? [] : ticksFor(yDomain, yGridStep);
   const showZeroX = xDomain[0] <= 0 && 0 <= xDomain[1];
   const showZeroY = yDomain[0] <= 0 && 0 <= yDomain[1];
 
