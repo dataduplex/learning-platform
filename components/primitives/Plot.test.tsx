@@ -193,7 +193,14 @@ describe('Plot axes', () => {
       expect(label).toHaveAttribute('x', '56');
       expect(label).toHaveAttribute('text-anchor', 'end');
     }
-    expect(screen.getByText('loss')).toHaveAttribute('x', '8');
+    expect(screen.getByText('loss')).toHaveAttribute('x', '12');
+  });
+
+  it('keeps the rotated y-axis title within the SVG bounds', () => {
+    render(<Plot title="with ticks" xDomain={[0, 1]} yDomain={[0, 1]} width={400} height={300} yTicks={ticks} yLabel="f(x)" />);
+    expect(screen.getByText('f(x)')).toHaveAttribute('x', '12');
+    render(<Plot title="without ticks" xDomain={[0, 1]} yDomain={[0, 1]} width={400} height={300} yLabel="value" />);
+    expect(screen.getByText('value')).toHaveAttribute('x', '12');
   });
 
   it('frames its data box and marks it for geometry checks', () => {

@@ -105,6 +105,9 @@ export const PLOT_LAYOUT = {
   yTickReserve: 36,
 } as const;
 
+/** An 11px line box reaches about 10px above the baseline. */
+const Y_TITLE_OFFSET = 12;
+
 export interface PlotPadding {
   readonly top: number;
   readonly right: number;
@@ -274,12 +277,11 @@ export function Plot(props: PlotProps) {
   } = props;
   const id = useId();
   const hasXTicks = (xTicks?.length ?? 0) > 0;
-  const hasYTicks = (yTicks?.length ?? 0) > 0;
   const scales = plotScales(props);
   const { inner } = scales;
   const bottom = inner.top + inner.height;
-  const { tickRow, titleRow, yTickGap, yTickReserve } = PLOT_LAYOUT;
-  const yTitleX = pixel(inner.left - (hasYTicks ? yTickGap + yTickReserve + 12 : 20));
+  const { tickRow, titleRow, yTickGap } = PLOT_LAYOUT;
+  const yTitleX = pixel(Y_TITLE_OFFSET);
   const yTitleY = pixel(inner.top + inner.height / 2);
 
   const xGridStep = typeof gridStep === 'number' ? gridStep : gridStep?.x;
