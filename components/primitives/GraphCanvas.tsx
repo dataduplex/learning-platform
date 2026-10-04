@@ -65,6 +65,16 @@ interface Gate {
   readonly bottom: number;
 }
 
+/** An edge as drawn: the node it points at, its path, its head, and its label's side. */
+interface DrawnEdge {
+  readonly edge: GraphEdge;
+  readonly to: GraphNode;
+  readonly path: readonly Point[];
+  readonly head: ArrowHead;
+  /** The label sits below the edge rather than above it. */
+  readonly below: boolean;
+}
+
 /**
  * The shortest path from start to end through every gate in order, sorted by x and all
  * strictly between the two. It bends only at a gate's top or bottom.
@@ -166,32 +176,19 @@ export function GraphCanvas({
   const pitch = columns > 1
     ? Math.max(COL_PITCH, (WIDE - PAD * 2 - BOX_W) / (columns - 1))
     : COL_PITCH;
-  const width = PAD * 2 + (columns - 1) * pitch + BOX_W;
-  const height = PAD * 2 + (yMax - yMin) * ROW_PITCH + BOX_H;
+  const width = pixel(PAD * 2 + (columns - 1) * pitch + BOX_W);
+  const height = pixel(PAD * 2 + (yMax - yMin) * ROW_PITCH + BOX_H);
 
   const cx = (node: GraphNode): number => PAD + BOX_W / 2 + node.x * pitch;
   const cy = (node: GraphNode): number => PAD + BOX_H / 2 + (node.y - yMin) * ROW_PITCH;
-  const find = (nodeId: string): GraphNode | undefined => nodes.find((node) => node.id === nodeId);
-
-  /** Each node's incoming edges, from the highest source down, so no two of them cross. */
-  const incoming = new Map<string, GraphEdge[]>();
-  for (const edge of edges) {
-    const shared = incoming.get(edge.toId) ?? [];
-    shared.push(edge);
-    incoming.set(edge.toId, shared);
-  }
-  const sourceY = (edge: GraphEdge): number => {
-    const from = find(edge.fromId);
-    return from === undefined ? 0 : cy(from);
-  };
-  for (const shared of incoming.values()) shared.sort((left, right) => sourceY(left) - sourceY(right));
-
-  /** Where an edge meets its target. Edges into one node spread evenly down its side. */
-  function arrivalY(edge: GraphEdge, to: GraphNode): number {
-    const shared = incoming.get(edge.toId) ?? [];
-    const index = shared.indexOf(edge);
-    return cy(to) + (index - (shared.length - 1) / 2) * (BOX_H / (shared.length + 1));
-  }
+  const joints = edges.map((edge) => {
+    const from = nodes.find((node) => node.id === edge.fromId);
+    const to = nodes.find((node) => node.id === edge.toId);
+    if (from === undefined || to === undefined) {
+      throw new Error(`the edge from "${edge.fromId}" to "${edge.toId}" joins a node the graph does not have`);
+    }
+    return { edge, from, to };
+  });
 
   /** The opening in one column nearest a height, kept CLEARANCE from every box in it. */
   function openingAt(column: number, near: number): Gate {
@@ -213,48 +210,58 @@ export function GraphCanvas({
     return { x: left, top: best[0], bottom: best[1] };
   }
 
-  /** An edge's path from its source's right side to its arrival, around every box between. */
-  function routeOf(edge: GraphEdge, from: GraphNode, to: GraphNode): Point[] {
+  /** A path from a source's right side to a height at its target's left side, kept CLEARANCE from every box between. */
+  function routeOf(from: GraphNode, to: GraphNode, arrival: number): Point[] {
     const start: Point = [cx(from) + BOX_W / 2, cy(from)];
-    const end: Point = [cx(to) - BOX_W / 2, arrivalY(edge, to)];
+    const end: Point = [cx(to) - BOX_W / 2, arrival];
     const gates: Gate[] = [];
     for (let column = from.x + 1; column < to.x; column += 1) {
       const middle = PAD + column * pitch + BOX_W / 2;
       const near = start[1] + ((end[1] - start[1]) * (middle - start[0])) / (end[0] - start[0]);
       const opening = openingAt(column, near);
-      gates.push(opening, { ...opening, x: opening.x + BOX_W });
+      gates.push(
+        { ...opening, x: opening.x - CLEARANCE },
+        { ...opening, x: opening.x + BOX_W + CLEARANCE },
+      );
     }
     return pullThrough(start, end, gates);
   }
 
-  const routes = new Map<GraphEdge, readonly Point[]>();
-  const heads = new Map<GraphEdge, ArrowHead>();
-  for (const edge of edges) {
-    const from = find(edge.fromId);
-    const to = find(edge.toId);
-    if (from === undefined || to === undefined) continue;
-    const path = routeOf(edge, from, to);
+  /**
+   * Edges into one node arrive in the order of their sources' heights, spread evenly down
+   * its left side. The lowest of several takes its label below the edge.
+   */
+  const drawn: readonly DrawnEdge[] = joints.map(({ edge, from, to }) => {
+    const siblings = joints
+      .filter((joint) => joint.to === to)
+      .sort((left, right) => cy(left.from) - cy(right.from));
+    const index = siblings.findIndex((joint) => joint.edge === edge);
+    const arrival = cy(to) + (index - (siblings.length - 1) / 2) * (BOX_H / (siblings.length + 1));
+    const path = routeOf(from, to, arrival);
     const [x1, y1] = path.at(-2) as Point;
     const [x2, y2] = path.at(-1) as Point;
     const length = Math.hypot(x2 - x1, y2 - y1);
-    routes.set(edge, path);
-    heads.set(edge, arrowHead(x2, y2, (x2 - x1) / length, (y2 - y1) / length, length));
-  }
+    return {
+      edge,
+      to,
+      path,
+      head: arrowHead(x2, y2, (x2 - x1) / length, (y2 - y1) / length, length),
+      below: siblings.length > 1 && index === siblings.length - 1,
+    };
+  });
 
   /**
-   * A label's baseline. The lowest of several edges into one node takes its label below
-   * the edge, and every other edge above, so a pair's labels sit on its far sides. A label
-   * reaches over its edge's head, so it clears the head as well as the edge.
+   * A label's right end and baseline. It ends LABEL_INSET short of its target and reaches
+   * over the head, so it clears the head as well as the edge.
    */
-  function labelY(edge: GraphEdge, path: readonly Point[], head: ArrowHead, right: number, text: string): number {
-    const heights = [
-      ...heightRange(path, right - text.length * LABEL_ADVANCE, right),
-      ...head.corners.map(([, y]) => y),
-    ];
-    const shared = incoming.get(edge.toId) ?? [];
-    return shared.length > 1 && shared.at(-1) === edge
-      ? Math.max(...heights) + LABEL_GAP + LABEL_ASCENT
-      : Math.min(...heights) - LABEL_GAP;
+  function labelAt({ to, path, head, below }: DrawnEdge, text: string): Point {
+    const right = (path.at(-1) as Point)[0] - LABEL_INSET;
+    const left = right - text.length * LABEL_ADVANCE;
+    if (left < PAD + (to.x - 1) * pitch + BOX_W) {
+      throw new Error(`the label "${text}" does not fit the channel before "${to.id}"`);
+    }
+    const heights = [...heightRange(path, left, right), ...head.corners.map(([, y]) => y)];
+    return [right, below ? Math.max(...heights) + LABEL_GAP + LABEL_ASCENT : Math.min(...heights) - LABEL_GAP];
   }
 
   const reading = [...nodes].sort((left, right) => left.x - right.x || left.y - right.y);
@@ -300,9 +307,7 @@ export function GraphCanvas({
   function nameOf(node: GraphNode): string {
     const computes = node.detail === undefined ? '' : `${node.detail}. `;
     const values = node.rows.map((row) => `${row.name} ${row.value}`).join(', ');
-    const inputs = edges
-      .filter((edge) => edge.toId === node.id)
-      .map((edge) => find(edge.fromId)?.label ?? edge.fromId);
+    const inputs = joints.filter((joint) => joint.to === node).map((joint) => joint.from.label);
     const parents = inputs.length === 0
       ? 'An input to the graph.'
       : `Inputs ${inputs.join(' and ')}.`;
@@ -325,26 +330,21 @@ export function GraphCanvas({
         <title id={`${id}-caption`}>{caption}</title>
 
         <g className="graph-edges" aria-hidden="true">
-          {edges.map((edge) => {
-            const path = routes.get(edge);
-            const head = heads.get(edge);
-            if (path === undefined || head === undefined) return null;
-            return (
-              <g
-                key={`${edge.fromId}-${edge.toId}`}
-                className="graph-edge"
-                data-from={edge.fromId}
-                data-to={edge.toId}
-                data-active={edge.active === true ? 'true' : undefined}
-              >
-                <polyline
-                  className="graph-edge-line"
-                  points={polylinePoints([...path.slice(0, -1), [head.baseX, head.baseY]])}
-                />
-                <path className="graph-edge-head" d={head.d} />
-              </g>
-            );
-          })}
+          {drawn.map(({ edge, path, head }) => (
+            <g
+              key={`${edge.fromId}-${edge.toId}`}
+              className="graph-edge"
+              data-from={edge.fromId}
+              data-to={edge.toId}
+              data-active={edge.active === true ? 'true' : undefined}
+            >
+              <polyline
+                className="graph-edge-line"
+                points={polylinePoints([...path.slice(0, -1), [head.baseX, head.baseY]])}
+              />
+              <path className="graph-edge-head" d={head.d} />
+            </g>
+          ))}
         </g>
 
         {nodes.map((node) => (
@@ -366,24 +366,24 @@ export function GraphCanvas({
           >
             <rect
               className="graph-node-box"
-              x={cx(node) - BOX_W / 2}
-              y={cy(node) - BOX_H / 2}
+              x={pixel(cx(node) - BOX_W / 2)}
+              y={pixel(cy(node) - BOX_H / 2)}
               width={BOX_W}
               height={BOX_H}
               rx={7}
               stroke={node.color}
             />
             {nodeLines(node).map((line, index, lines) => {
-              const y = cy(node) + 4 + (index - (lines.length - 1) / 2) * LINE;
+              const y = pixel(cy(node) + 4 + (index - (lines.length - 1) / 2) * LINE);
               return line.kind === 'row' ? (
-                <text key={line.key} className="graph-node-value" x={cx(node)} y={y} textAnchor="middle">
+                <text key={line.key} className="graph-node-value" x={pixel(cx(node))} y={y} textAnchor="middle">
                   {line.short === undefined ? null : (
                     <><tspan className="graph-node-short">{line.short}</tspan>{' '}</>
                   )}
                   {line.text}
                 </text>
               ) : (
-                <text key={line.key} className={`graph-node-${line.kind}`} x={cx(node)} y={y} textAnchor="middle">
+                <text key={line.key} className={`graph-node-${line.kind}`} x={pixel(cx(node))} y={y} textAnchor="middle">
                   {line.text}
                 </text>
               );
@@ -391,22 +391,18 @@ export function GraphCanvas({
           </g>
         ))}
 
-        {/*
-          Labels last, and each one inside the empty channel left of the node it points at.
-          No box reaches into that channel, so a label cannot land on an unrelated node.
-        */}
+        {/* Labels last, each inside the empty channel left of the node it points at. */}
         <g className="graph-edge-labels" aria-hidden="true">
-          {edges.map((edge) => {
-            const path = routes.get(edge);
-            const head = heads.get(edge);
-            if (path === undefined || head === undefined || edge.label === undefined) return null;
-            const right = (path.at(-1) as Point)[0] - LABEL_INSET;
+          {drawn.map((each) => {
+            const { edge } = each;
+            if (edge.label === undefined) return null;
+            const [x, y] = labelAt(each, edge.label);
             return (
               <text
                 key={`${edge.fromId}-${edge.toId}`}
                 className="graph-edge-label"
-                x={right}
-                y={pixel(labelY(edge, path, head, right, edge.label))}
+                x={pixel(x)}
+                y={pixel(y)}
                 textAnchor="end"
               >
                 {edge.label}

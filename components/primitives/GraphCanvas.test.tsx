@@ -40,6 +40,14 @@ const REUSE_EDGES: readonly GraphEdge[] = [
   { fromId: 'a', toId: 'y', label: '-1.00', active: true },
 ];
 
+/** Five columns at the narrowest pitch, with two steep edges into r. */
+const STEEP: readonly GraphNode[] = [
+  { id: 'p', label: 'p', rows: [], color: seriesVar(1), x: 0, y: -2 },
+  { id: 'q', label: 'q', rows: [], color: seriesVar(1), x: 0, y: -1 },
+  { id: 'r', label: 'r', rows: [], color: seriesVar(7), x: 1, y: 0 },
+  ...[2, 3, 4].map((column): GraphNode => ({ id: `n${column}`, label: `n${column}`, rows: [], color: seriesVar(7), x: column, y: 0 })),
+];
+
 type Point = readonly [number, number];
 
 function renderCanvas(props: Partial<Parameters<typeof GraphCanvas>[0]> = {}) {
@@ -89,17 +97,35 @@ function gap([x, y]: Point, box: Box): number {
   return Math.hypot(dx, dy);
 }
 
-function closestApproach(path: readonly Point[], box: Box): number {
-  let closest = Infinity;
-  for (let index = 1; index < path.length; index += 1) {
-    const [x1, y1] = path[index - 1] as Point;
-    const [x2, y2] = path[index] as Point;
-    for (let step = 0; step <= 200; step += 1) {
-      const t = step / 200;
-      closest = Math.min(closest, gap([x1 + (x2 - x1) * t, y1 + (y2 - y1) * t], box));
-    }
+/** The least distance from a segment to a box, zero where they meet. */
+function segmentGap(from: Point, to: Point, box: Box): number {
+  const dx = to[0] - from[0];
+  const dy = to[1] - from[1];
+  // Liang-Barsky: the stretch of the segment inside the box, empty when enter > leave.
+  let enter = 0;
+  let leave = 1;
+  for (const [p, q] of [
+    [-dx, from[0] - box.x], [dx, box.x + box.width - from[0]],
+    [-dy, from[1] - box.y], [dy, box.y + box.height - from[1]],
+  ] as const) {
+    if (p === 0 && q < 0) [enter, leave] = [1, 0];
+    else if (p < 0) enter = Math.max(enter, q / p);
+    else if (p > 0) leave = Math.min(leave, q / p);
   }
-  return closest;
+  if (enter <= leave) return 0;
+  const toSegment = ([x, y]: Point): number => {
+    const t = Math.max(0, Math.min(1, ((x - from[0]) * dx + (y - from[1]) * dy) / (dx * dx + dy * dy)));
+    return Math.hypot(from[0] + t * dx - x, from[1] + t * dy - y);
+  };
+  const right = box.x + box.width;
+  const bottom = box.y + box.height;
+  const corners: Point[] = [[box.x, box.y], [right, box.y], [box.x, bottom], [right, bottom]];
+  return Math.min(gap(from, box), gap(to, box), ...corners.map(toSegment));
+}
+
+/** The least distance from a path to a box, zero where they meet. */
+function closestApproach(path: readonly Point[], box: Box): number {
+  return Math.min(...path.slice(1).map((point, index) => segmentGap(path[index] as Point, point, box)));
 }
 
 describe('GraphCanvas', () => {
@@ -147,13 +173,14 @@ describe('GraphCanvas', () => {
       <GraphCanvas nodes={REUSE_NODES} edges={REUSE_EDGES} caption="A reused input" />,
     );
     const all = boxes(container);
-    for (const each of container.querySelectorAll('g.graph-edge')) {
+    const approaches = [...container.querySelectorAll('g.graph-edge')].flatMap((each) => {
       const ends = [each.getAttribute('data-from'), each.getAttribute('data-to')];
-      for (const box of all.filter((candidate) => !ends.includes(candidate.id))) {
-        expect(closestApproach(linePoints(each), box), `${ends.join(' to ')} past ${box.id}`)
-          .toBeGreaterThanOrEqual(4);
-      }
-    }
+      return all
+        .filter((box) => !ends.includes(box.id))
+        .map((box) => closestApproach(linePoints(each), box));
+    });
+    // a to y bends at (332, 52), 6px right of and above e's corner at (326, 58), and passes that corner 6.154px off.
+    expect(Math.min(...approaches)).toBeCloseTo(6.154, 3);
     expect(linePoints(edge(container, 'a', 'y'))).toHaveLength(3);
   });
 
@@ -196,14 +223,8 @@ describe('GraphCanvas', () => {
   });
 
   it('fits a five-character label into the narrowest channel, clear of the column before it', () => {
-    const steep: GraphNode[] = [
-      { id: 'p', label: 'p', rows: [], color: seriesVar(1), x: 0, y: -2 },
-      { id: 'q', label: 'q', rows: [], color: seriesVar(1), x: 0, y: -1 },
-      { id: 'r', label: 'r', rows: [], color: seriesVar(7), x: 1, y: 0 },
-      ...[2, 3, 4].map((column): GraphNode => ({ id: `n${column}`, label: `n${column}`, rows: [], color: seriesVar(7), x: column, y: 0 })),
-    ];
     const { container } = renderCanvas({
-      nodes: steep,
+      nodes: STEEP,
       edges: [{ fromId: 'p', toId: 'r', label: '-0.00' }, { fromId: 'q', toId: 'r', label: '-1.25' }],
     });
     const columnRight = 10 + 92;
@@ -214,13 +235,24 @@ describe('GraphCanvas', () => {
     }
   });
 
+  it('refuses a label too long for the narrowest channel', () => {
+    expect(() => renderCanvas({ nodes: STEEP, edges: [{ fromId: 'p', toId: 'r', label: '-10.00' }] }))
+      .toThrow('the label "-10.00" does not fit the channel before "r"');
+  });
+
+  it('refuses an edge that names a node the graph does not have', () => {
+    expect(() => renderCanvas({ edges: [...EDGES, { fromId: 'a', toId: 'z' }] }))
+      .toThrow('the edge from "a" to "z" joins a node the graph does not have');
+  });
+
   it('puts the labels of two edges into one node on the far sides of the pair', () => {
     const { container } = renderCanvas();
     const [upper, lower] = [...container.querySelectorAll('text.graph-edge-label')]
       .map((text) => Number(text.getAttribute('y'))) as [number, number];
-    // The upper label sits above the upper edge and the lower one below the lower edge.
-    expect(upper).toBeLessThan(130);
-    expect(lower).toBeGreaterThan(154 + 4);
+    // The upper baseline is 4px above the upper head's top corner, at 126.83.
+    expect(upper).toBeCloseTo(122.83, 2);
+    // The lower label's top is 4px below the lower edge where the label starts, at 162.69.
+    expect(lower).toBeCloseTo(175.69, 2);
   });
 
   it('marks the edges the caller called active, so a step is visible', () => {
@@ -307,7 +339,6 @@ describe('GraphCanvas', () => {
   it('spreads a graph of few columns across the card', () => {
     const { container } = renderCanvas();
     const svg = container.querySelector('svg.graph-canvas-svg');
-    expect(Number(svg?.getAttribute('width'))).toBeGreaterThanOrEqual(540);
     // Three columns 224px apart and three rows 96px apart.
     expect(svg).toHaveAttribute('viewBox', '0 0 560 284');
   });
