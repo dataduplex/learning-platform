@@ -52,6 +52,16 @@ describe('Bar', () => {
     const { container } = render(<svg><Bar scales={scales} x={1} base={0} value={0} role="z" color="red" /></svg>);
     expect(container.querySelector('path')?.getAttribute('d')).not.toMatch(/NaN/);
   });
+
+  it('draws nothing where either end is not finite', () => {
+    for (const [base, value] of [[0, Number.NaN], [0, Infinity], [0, -Infinity], [Number.NaN, 0.5]] as const) {
+      const { container, unmount } = render(
+        <svg><Bar scales={scales} x={1} base={base} value={value} role="n" color="red" /></svg>,
+      );
+      expect(container.querySelector('path')).toBeNull();
+      unmount();
+    }
+  });
 });
 
 describe('horizontalBarPath', () => {

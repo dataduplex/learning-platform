@@ -55,6 +55,7 @@ export function Bar({
   role: string;
   color: string;
 }) {
+  if (!Number.isFinite(base) || !Number.isFinite(value)) return null;
   const half = Math.min(width, BAR_MAX_WIDTH) / 2;
   const centre = scales.x(x) + dx;
   return (

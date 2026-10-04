@@ -45,15 +45,30 @@ export function pathPoints(path: Element | null): [number, number][] {
     .map((match) => [Number(match[1]), Number(match[2])]);
 }
 
-/** Every vertex of a path written with absolute M, L and A commands, an arc's being its end point. */
+/** Every SVG path command letter, so a number's exponent is not read as one. */
+const PATH_COMMAND = /([MmLlHhVvCcSsQqTtAaZz])([^MmLlHhVvCcSsQqTtAaZz]*)/g;
+/** How many numbers each command this reads takes. */
+const PATH_ARITY: Readonly<Record<string, number>> = { M: 2, L: 2, A: 7, Z: 0 };
+
+/**
+ * Every vertex of a path written with absolute M, L and A commands, an arc's being its end
+ * point. Throws on any other command rather than leave its vertices out.
+ */
 export function pathVertices(path: Element | null): [number, number][] {
   const d = path?.getAttribute('d') ?? '';
-  return [...d.matchAll(/([MLA])([^MLAZ]*)/g)].map(([, command, args]) => {
-    const values = (args ?? '').trim().split(/[ ,]+/).map(Number);
-    const [x, y] = command === 'A' ? values.slice(5) : values;
-    if (x === undefined || y === undefined) throw new Error(`"${d}" has a ${command ?? '?'} without a point`);
-    return [x, y];
-  });
+  if (/NaN|Infinity/.test(d)) throw new Error(`"${d}" has a coordinate that is not finite`);
+  const vertices: [number, number][] = [];
+  for (const [, command = '', args = ''] of d.matchAll(PATH_COMMAND)) {
+    const arity = PATH_ARITY[command];
+    if (arity === undefined) throw new Error(`"${d}" uses the ${command} command, which pathVertices does not read`);
+    const values = args.trim() === '' ? [] : args.trim().split(/[ ,]+/).map(Number);
+    if (values.length !== arity) {
+      throw new Error(`"${d}" gives ${command} ${values.length} numbers where it takes ${arity}`);
+    }
+    const [x, y] = values.slice(-2);
+    if (x !== undefined && y !== undefined) vertices.push([x, y]);
+  }
+  return vertices;
 }
 
 /** The box a path's vertices span. */
