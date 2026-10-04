@@ -179,6 +179,34 @@ export function segmentWithin(
   };
 }
 
+/** An arrowhead in pixel space: the centre of its base, its corners, and its outline. */
+export interface ArrowHead {
+  readonly baseX: number;
+  readonly baseY: number;
+  /** The tip, then the two ends of the base. */
+  readonly corners: readonly (readonly [number, number])[];
+  readonly d: string;
+}
+
+/**
+ * The head whose tip is (x, y), pointing along the unit vector (ux, uy). It shrinks in
+ * proportion when the arrow is shorter than a full head.
+ */
+export function arrowHead(x: number, y: number, ux: number, uy: number, length: number): ArrowHead {
+  const head = Math.min(HEAD_LENGTH, length);
+  const half = HEAD_HALF_WIDTH * (head / HEAD_LENGTH);
+  const baseX = x - ux * head;
+  const baseY = y - uy * head;
+  const corners = [[x, y], [baseX - uy * half, baseY + ux * half], [baseX + uy * half, baseY - ux * half]] as const;
+  const [tip, left, right] = corners;
+  return {
+    baseX,
+    baseY,
+    corners,
+    d: `M${pixel(tip[0])},${pixel(tip[1])} L${pixel(left[0])},${pixel(left[1])} L${pixel(right[0])},${pixel(right[1])} Z`,
+  };
+}
+
 /** A vector from tail to tip, with a drawn head so its direction never has to be guessed. */
 export function VectorArrow({
   scales, from, to, color, className, within,
@@ -193,17 +221,14 @@ export function VectorArrow({
   const geometry = arrowGeometry(scales, from, to, within);
   if (geometry === null) return null;
   const { x0, y0, x1, y1, ux, uy, length, clipped } = geometry;
-  const head = Math.min(HEAD_LENGTH, length);
-  const baseX = x1 - ux * head;
-  const baseY = y1 - uy * head;
-  const half = HEAD_HALF_WIDTH * (head / HEAD_LENGTH);
+  const head = arrowHead(x1, y1, ux, uy, length);
   const marked = clipped ? { 'data-clipped': 'true' } : {};
   return (
     <>
       <line
         className={className}
         data-role="vector-shaft"
-        x1={pixel(x0)} y1={pixel(y0)} x2={pixel(baseX)} y2={pixel(baseY)}
+        x1={pixel(x0)} y1={pixel(y0)} x2={pixel(head.baseX)} y2={pixel(head.baseY)}
         stroke={color}
         {...marked}
       />
@@ -211,8 +236,7 @@ export function VectorArrow({
         className={`${className}-head`}
         data-role="vector-head"
         fill={color}
-        d={`M${pixel(x1)},${pixel(y1)} L${pixel(baseX - uy * half)},${pixel(baseY + ux * half)} `
-          + `L${pixel(baseX + uy * half)},${pixel(baseY - ux * half)} Z`}
+        d={head.d}
         {...marked}
       />
     </>
