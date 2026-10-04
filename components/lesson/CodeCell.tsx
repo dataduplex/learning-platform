@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { isValidElement, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import {
   browserWorker,
   createPyodideClient,
@@ -10,19 +10,42 @@ import {
 
 type Phase = 'idle' | 'loading' | 'running' | 'done';
 
+/** The text of a fenced Python block, without the newline that closes it. */
+export function fencedCode(children: ReactNode): string {
+  if (isValidElement<{ children?: ReactNode }>(children) && children.type === 'pre') {
+    const code = children.props.children;
+    if (
+      isValidElement<{ className?: string; children?: ReactNode }>(code)
+      && code.type === 'code'
+      && code.props.className === 'language-python'
+      && typeof code.props.children === 'string'
+    ) {
+      return code.props.children.replace(/\n$/, '');
+    }
+  }
+  throw new Error('A code cell holds exactly one fenced python block.');
+}
+
+/** One row per line, so every line shows whole. */
+export function editorRows(source: string): number {
+  return Math.max(3, source.split('\n').length);
+}
+
 export function CodeCell({
-  code,
+  children,
   label = 'Python',
   editable = false,
   client: injected,
 }: {
-  code: string;
+  /** One fenced python block. Its text is kept verbatim, indentation included. */
+  children: ReactNode;
   label?: string;
   editable?: boolean;
   /** Tests inject a stub; the browser gets a lazily created worker client. */
   client?: PyodideClient;
 }) {
   const id = useId();
+  const code = fencedCode(children);
   const [source, setSource] = useState(code);
   const [phase, setPhase] = useState<Phase>('idle');
   const [result, setResult] = useState<RunResult | null>(null);
@@ -73,7 +96,8 @@ export function CodeCell({
           className="code-cell-editor"
           aria-label={`${label} code`}
           spellCheck={false}
-          rows={Math.max(3, source.split('\n').length)}
+          wrap="off"
+          rows={editorRows(source)}
           value={source}
           onChange={(event) => setSource(event.target.value)}
         />
