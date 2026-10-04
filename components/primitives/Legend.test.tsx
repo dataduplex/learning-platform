@@ -60,6 +60,17 @@ describe('Legend', () => {
     expect(document.querySelectorAll('.legend-swatch')).toHaveLength(1);
   });
 
+  it('renders a framed area key when kind is area, filled with its color', () => {
+    const items = [
+      { label: 'span', color: 'var(--subspace-fill)', kind: 'area' as const },
+      { label: 'column', color: 'var(--series-1)' },
+    ];
+    render(<Legend items={items} />);
+    const keys = [...document.querySelectorAll('.legend-item > [aria-hidden="true"]')] as HTMLElement[];
+    expect(keys.map((key) => [key.className, key.style.background]))
+      .toEqual([['legend-area', 'var(--subspace-fill)'], ['legend-swatch', 'var(--series-1)']]);
+  });
+
   it('renders a swatch when kind is omitted', () => {
     render(<Legend items={ITEMS} />);
     expect(document.querySelectorAll('.legend-swatch')).toHaveLength(2);

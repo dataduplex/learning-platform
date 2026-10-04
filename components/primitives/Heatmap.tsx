@@ -1,8 +1,10 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useId } from 'react';
 import { at, type Mat } from '@/lib/linalg';
 import { inkOn } from '@/lib/palette';
+import { ColorKey, swatchWidthFor, type KeyStop } from './ColorKey';
 import { formatFixed } from './NumberReadout';
 import { TableView } from './TableView';
 
@@ -33,6 +35,7 @@ export function Heatmap({
   cellSize = 34,
   digits = 2,
   showValues = false,
+  colorKey,
   onActiveCell,
 }: {
   matrix: Mat;
@@ -45,6 +48,8 @@ export function Heatmap({
   digits?: number;
   /** Print each value in its cell. Needs a cellSize wide enough for the formatted number. */
   showValues?: boolean;
+  /** Set under the cells, spanning their grid. */
+  colorKey?: { caption: ReactNode; stops: readonly KeyStop[] };
   onActiveCell?: (cell: ActiveCell | null) => void;
 }) {
   const id = useId();
@@ -134,6 +139,15 @@ export function Heatmap({
           }),
         )}
       </svg>
+      {colorKey === undefined ? null : (
+        <div className="heatmap-key" style={{ marginLeft: gutterLeft }}>
+          <ColorKey
+            caption={colorKey.caption}
+            stops={colorKey.stops}
+            swatchWidth={swatchWidthFor(matrix.cols * cellSize, colorKey.stops.length)}
+          />
+        </div>
+      )}
       <figcaption className="heatmap-caption">{caption}</figcaption>
       <TableView caption={caption} columns={columns} rows={rows} />
     </figure>

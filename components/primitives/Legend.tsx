@@ -6,8 +6,11 @@ export interface LegendItem {
   label: string;
   /** A CSS color, normally a var(--series-N) from lib/palette.ts. */
   color: string;
-  kind?: 'swatch' | 'line' | 'dashed';
+  /** `area` keys a filled region: a framed swatch. */
+  kind?: 'swatch' | 'line' | 'dashed' | 'area';
 }
+
+const KEY_CLASS = { swatch: 'legend-swatch', line: 'legend-line', area: 'legend-area' } as const;
 
 /**
  * Renders nothing for a single series: the figure's own title names it, and a
@@ -28,7 +31,7 @@ export function Legend({ items, label }: { items: readonly LegendItem[]; label?:
               <span className="legend-dashed" aria-hidden="true" style={{ borderColor: item.color }} />
             ) : (
               <span
-                className={item.kind === 'line' ? 'legend-line' : 'legend-swatch'}
+                className={KEY_CLASS[item.kind ?? 'swatch']}
                 aria-hidden="true"
                 style={{ background: item.color }}
               />

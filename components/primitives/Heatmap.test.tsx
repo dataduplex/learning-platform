@@ -62,6 +62,21 @@ describe('Heatmap', () => {
     expect(document.querySelector('.heatmap-label')).toHaveAttribute('x', '26');
   });
 
+  it('sets its colour key directly under the cells, from the grid\'s left edge across its columns', () => {
+    const stops = Array.from({ length: 7 }, (_, step) => ({ color: colorFor(step - 1) }));
+    render(
+      <Heatmap matrix={matrix} colorFor={colorFor} caption="c" rowLabels={['q1', 'q10']} colorKey={{ caption: 'Value', stops }} />,
+    );
+    const key = document.querySelector('.heatmap-key') as HTMLElement;
+    expect([key.previousElementSibling?.getAttribute('class'), key.nextElementSibling?.getAttribute('class')])
+      .toEqual(['heatmap-svg', 'heatmap-caption']);
+    // The grid starts after 8 of edge, 3 glyphs of 6 and 10 to it; 2 columns of 34 span 68,
+    // which 7 swatches of 8 and 6 gaps of 2 fill.
+    expect(key.style.marginLeft).toBe('36px');
+    expect((key.querySelector('.color-key-row') as HTMLElement).style.width).toBe('68px');
+    expect((key.querySelector('.color-key-stop') as HTMLElement).style.width).toBe('8px');
+  });
+
   it('always ships the table view, so the numbers are reachable without color', async () => {
     const user = userEvent.setup();
     render(<Heatmap matrix={matrix} colorFor={colorFor} caption="Attention weights" />);
