@@ -45,6 +45,11 @@ export function oklabLightness(hex: string): number {
   return oklabOf(hex)[0];
 }
 
+export function oklchChroma(hex: string): number {
+  const [, a, b] = oklabOf(hex);
+  return Math.hypot(a, b);
+}
+
 function linearToHex([r, g, b]: Rgb): string {
   const channel = (v: number) => fromLinear(Math.min(1, Math.max(0, v)));
   return toHex([channel(r), channel(g), channel(b)]);
@@ -165,17 +170,11 @@ export function divergingScale(
   };
 }
 
-/** Each warm step matches its cool partner's lightness, in the red pole's hue. */
+/** Each warm step matches its cool partner's lightness and chroma, in the red pole's hue. */
 function warmSteps(mode: Mode, coolArm: readonly string[]): string[] {
   const pole = oklabOf(SERIES[mode][7] as string);
-  const middle = oklabOf(DIVERGING_MID[mode]);
   const hue = Math.atan2(pole[2], pole[1]);
-  const poleChroma = Math.hypot(pole[1], pole[2]);
-  const middleChroma = Math.hypot(middle[1], middle[2]);
-  return coolArm.map((cool, i) => {
-    const t = (i + 1) / coolArm.length;
-    return oklchToHex(oklabLightness(cool), middleChroma + (poleChroma - middleChroma) * t, hue);
-  });
+  return coolArm.map((cool) => oklchToHex(oklabLightness(cool), oklchChroma(cool), hue));
 }
 
 function parseHex(hex: string): [number, number, number] {

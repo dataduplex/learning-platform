@@ -200,7 +200,7 @@ describe('Plot axes', () => {
     render(<Plot title="with ticks" xDomain={[0, 1]} yDomain={[0, 1]} width={400} height={300} yTicks={ticks} yLabel="f(x)" />);
     expect(screen.getByText('f(x)')).toHaveAttribute('x', '12');
     render(<Plot title="without ticks" xDomain={[0, 1]} yDomain={[0, 1]} width={400} height={300} yLabel="value" />);
-    expect(screen.getByText('value')).toHaveAttribute('x', '12');
+    expect(screen.getByText('value')).toHaveAttribute('x', '20');
   });
 
   it('frames its data box and marks it for geometry checks', () => {
@@ -257,6 +257,13 @@ describe('plotScales', () => {
 
   it('lays a vector plane out as a 348px square beside its tick values', () => {
     expect(plotScales(plane).inner).toEqual({ left: 131, top: 36, width: 348, height: 348 });
+  });
+
+  it('keeps the y title 8px left of the tick column when the data box is centred', () => {
+    const titled: PlotLayout = { ...plane, yLabel: 'second coordinate' };
+    expect(plotScales(titled).inner.left).toBe(139);
+    render(<Plot title="p" {...titled} />);
+    expect(screen.getByText('second coordinate')).toHaveAttribute('x', '87');
   });
 });
 

@@ -38,12 +38,13 @@ export function MatrixInput({
     onChange(matFrom(rows));
   }
 
+  const tracks = { gridTemplateColumns: `repeat(${value.cols}, minmax(0, 4.5rem))` };
+
   return (
     <div
       className="matrix-input"
       role="group"
       {...(caption !== undefined ? { 'aria-labelledby': `${id}-caption` } : { 'aria-labelledby': `${id}-label` })}
-      style={{ gridTemplateColumns: `repeat(${value.cols}, minmax(0, 4.5rem))` }}
     >
       {caption !== undefined ? (
         <span className="matrix-input-caption" id={`${id}-caption`}>{caption}</span>
@@ -52,28 +53,34 @@ export function MatrixInput({
           {label}, {value.rows} by {value.cols} matrix
         </span>
       )}
-      {columnLabels?.map((columnLabel, column) => (
-        <span key={`col-${column}`} className="matrix-input-column">{columnLabel}</span>
-      ))}
-      {Array.from({ length: value.rows }).flatMap((_, row) =>
-        Array.from({ length: value.cols }).map((__, column) => {
-          const cellName = columnLabels
-            ? `${label} ${columnLabels[column]}${value.rows > 1 ? ` row ${row + 1}` : ''}`
-            : `${label} row ${row + 1} column ${column + 1}`;
-          return (
-            <input
-              key={`${row}-${column}`}
-              type="number"
-              step={step}
-              {...(min === undefined ? {} : { min })}
-              {...(max === undefined ? {} : { max })}
-              aria-label={cellName}
-              value={at(value, row, column)}
-              onChange={(event) => setCell(row, column, event.target.value)}
-            />
-          );
-        }),
+      {columnLabels === undefined ? null : (
+        <div className="matrix-input-columns" style={tracks}>
+          {columnLabels.map((columnLabel, column) => (
+            <span key={`col-${column}`} className="matrix-input-column">{columnLabel}</span>
+          ))}
+        </div>
       )}
+      <div className="matrix-input-cells" style={tracks}>
+        {Array.from({ length: value.rows }).flatMap((_, row) =>
+          Array.from({ length: value.cols }).map((__, column) => {
+            const cellName = columnLabels
+              ? `${label} ${columnLabels[column]}${value.rows > 1 ? ` row ${row + 1}` : ''}`
+              : `${label} row ${row + 1} column ${column + 1}`;
+            return (
+              <input
+                key={`${row}-${column}`}
+                type="number"
+                step={step}
+                {...(min === undefined ? {} : { min })}
+                {...(max === undefined ? {} : { max })}
+                aria-label={cellName}
+                value={at(value, row, column)}
+                onChange={(event) => setCell(row, column, event.target.value)}
+              />
+            );
+          }),
+        )}
+      </div>
     </div>
   );
 }

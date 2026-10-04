@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ALL_PAIRS_SERIES_CAP, DIVERGING_MID, SEQUENTIAL_BLUE, SERIES,
-  contourScale, contrastRatio, divergingScale, inkOn, oklabLightness, sequentialScale, seriesVar, statusVar,
+  contourScale, contrastRatio, divergingScale, inkOn, oklabLightness, oklchChroma, sequentialScale, seriesVar, statusVar,
 } from './palette';
 
 describe('palette constants', () => {
@@ -135,6 +135,30 @@ describe('diverging arms', () => {
       const scale = divergingScale(-6, 6, mode);
       for (let v = 1; v <= 6; v += 1) {
         expect(Math.abs(oklabLightness(scale(v)) - oklabLightness(scale(-v)))).toBeLessThan(0.02);
+      }
+    }
+  });
+
+  it('match in chroma step for step, so the warm arm is as vivid as the cool one', () => {
+    for (const mode of ['light', 'dark'] as const) {
+      const scale = divergingScale(-6, 6, mode);
+      for (let v = 1; v <= 6; v += 1) {
+        expect(Math.abs(oklchChroma(scale(v)) - oklchChroma(scale(-v)))).toBeLessThan(0.002);
+      }
+    }
+  });
+
+  it('run warm from the midpoint to the red pole in six pinned steps', () => {
+    const warm = (mode: 'light' | 'dark') => [1, 2, 3, 4, 5, 6].map((v) => divergingScale(-6, 6, mode)(v));
+    expect(warm('light')).toEqual(['#f1aea8', '#e4857e', '#d75853', '#b13f3c', '#892b2a', '#621b1a']);
+    expect(warm('dark')).toEqual(['#892b2e', '#b13e41', '#d75758', '#e48482', '#f1aeaa', '#fad6d3']);
+  });
+
+  it('keep every step readable under the ink inkOn picks for it', () => {
+    for (const mode of ['light', 'dark'] as const) {
+      const scale = divergingScale(-6, 6, mode);
+      for (let v = -6; v <= 6; v += 1) {
+        expect(contrastRatio(inkOn(scale(v)), scale(v))).toBeGreaterThanOrEqual(4.5);
       }
     }
   });

@@ -64,6 +64,25 @@ describe('MatrixInput', () => {
     expect(screen.getByText('Logits')).toHaveClass('matrix-input-caption');
   });
 
+  it('brackets the cells alone, with the caption and column labels above the bracketed box', () => {
+    render(
+      <MatrixInput
+        label="Logits"
+        caption="Logits"
+        value={matFrom([[0.5, 0.3]])}
+        onChange={() => {}}
+        columnLabels={['mat', 'floor']}
+      />,
+    );
+    const group = screen.getByRole('group', { name: 'Logits' });
+    expect([...group.children].map((child) => child.className))
+      .toEqual(['matrix-input-caption', 'matrix-input-columns', 'matrix-input-cells']);
+    const bracketed = group.querySelector('.matrix-input-cells');
+    expect([...(bracketed?.children ?? [])].map((child) => child.getAttribute('aria-label'))).toEqual(['Logits mat', 'Logits floor']);
+    expect(bracketed).not.toContainElement(screen.getByText('Logits'));
+    expect(bracketed).not.toContainElement(screen.getByText('mat'));
+  });
+
   it('names cells by column label when given', () => {
     render(
       <MatrixInput

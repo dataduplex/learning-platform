@@ -103,10 +103,12 @@ export const PLOT_LAYOUT = {
   yTickGap: 8,
   /** Room for y tick text of up to six characters at 11px. */
   yTickReserve: 36,
+  /** From the y title's baseline to the tick column. */
+  yTitleGap: 8,
 } as const;
 
 /** An 11px line box reaches about 10px above the baseline. */
-const Y_TITLE_OFFSET = 12;
+const Y_TITLE_ASCENT = 12;
 
 export interface PlotPadding {
   readonly top: number;
@@ -120,11 +122,12 @@ export function plotPadding(
   draws: { readonly xTicks: boolean; readonly xLabel: boolean; readonly yTicks: boolean; readonly yLabel: boolean },
   base = 36,
 ): PlotPadding {
-  const { tickRow, titleRow, yTickGap, yTickReserve } = PLOT_LAYOUT;
+  const { tickRow, titleRow, yTickGap, yTickReserve, yTitleGap } = PLOT_LAYOUT;
   const bottom = draws.xTicks && draws.xLabel ? tickRow + titleRow + 10
     : draws.xTicks || draws.xLabel ? tickRow + 10 : 0;
-  const left = draws.yTicks ? yTickGap + yTickReserve + (draws.yLabel ? 20 : 4)
-    : draws.yLabel ? 28 : 0;
+  const yTitleRoom = yTitleGap + Y_TITLE_ASCENT;
+  const left = draws.yTicks ? yTickGap + yTickReserve + (draws.yLabel ? yTitleRoom : 4)
+    : draws.yLabel ? yTickGap + yTitleRoom : 0;
   return { top: base, right: base, bottom: Math.max(base, bottom), left: Math.max(base, left) };
 }
 
@@ -277,11 +280,12 @@ export function Plot(props: PlotProps) {
   } = props;
   const id = useId();
   const hasXTicks = (xTicks?.length ?? 0) > 0;
+  const hasYTicks = (yTicks?.length ?? 0) > 0;
   const scales = plotScales(props);
   const { inner } = scales;
   const bottom = inner.top + inner.height;
-  const { tickRow, titleRow, yTickGap } = PLOT_LAYOUT;
-  const yTitleX = pixel(Y_TITLE_OFFSET);
+  const { tickRow, titleRow, yTickGap, yTickReserve, yTitleGap } = PLOT_LAYOUT;
+  const yTitleX = pixel(inner.left - yTickGap - (hasYTicks ? yTickReserve : 0) - yTitleGap);
   const yTitleY = pixel(inner.top + inner.height / 2);
 
   const xGridStep = typeof gridStep === 'number' ? gridStep : gridStep?.x;
