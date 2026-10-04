@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import {
-  CHART_WIDTH, Plot, createScales, decadeLabel, pixel, plotPadding, plotScales, polylinePoints, wholeTicks,
+  CHART_WIDTH, PROBABILITY_TICKS, Plot, createScales, decadeLabel, niceStep, pixel, plotPadding, plotScales, polylinePoints,
+  stepTicks, wholeTicks,
   type PlotLayout,
 } from './Plot';
 
@@ -237,5 +238,46 @@ describe('wholeTicks', () => {
 
   it('refuses a step that is not a whole number, whose labels would round', () => {
     expect(() => wholeTicks([0, 1], 0.5)).toThrow(RangeError);
+  });
+});
+
+describe('stepTicks', () => {
+  it("labels each multiple of the step to the step's decimals, without trailing zeros", () => {
+    expect(stepTicks([0, 1], 0.25)).toEqual([
+      { at: 0, label: '0' }, { at: 0.25, label: '0.25' }, { at: 0.5, label: '0.5' },
+      { at: 0.75, label: '0.75' }, { at: 1, label: '1' },
+    ]);
+    expect(stepTicks([-1, 1], 0.5).map((tick) => tick.label)).toEqual(['-1', '-0.5', '0', '0.5', '1']);
+    expect(stepTicks([-3.25, 2.75], 0.75).map((tick) => tick.label))
+      .toEqual(['-3', '-2.25', '-1.5', '-0.75', '0', '0.75', '1.5', '2.25']);
+    expect(stepTicks([0, 0.32], 0.05).map((tick) => tick.label))
+      .toEqual(['0', '0.05', '0.1', '0.15', '0.2', '0.25', '0.3']);
+    expect(stepTicks([-6, 10], 2).map((tick) => tick.label))
+      .toEqual(['-6', '-4', '-2', '0', '2', '4', '6', '8', '10']);
+  });
+
+  it('ticks a probability axis at quarters', () => {
+    expect(PROBABILITY_TICKS).toEqual([
+      { at: 0, label: '0' }, { at: 0.25, label: '0.25' }, { at: 0.5, label: '0.5' },
+      { at: 0.75, label: '0.75' }, { at: 1, label: '1' },
+    ]);
+  });
+
+  it('refuses a step that is not positive and finite', () => {
+    expect(() => stepTicks([0, 1], 0)).toThrow(RangeError);
+    expect(() => stepTicks([0, 1], -0.5)).toThrow(RangeError);
+    expect(() => stepTicks([0, 1], Number.POSITIVE_INFINITY)).toThrow(RangeError);
+  });
+});
+
+describe('niceStep', () => {
+  it('picks one, two or five times a power of ten that splits the span into about five', () => {
+    expect([2.553, 1.277, 0.8511, 0.6383, 0.5107, 0.4255, 0.3647, 0.3191, 1.9, 5.1].map((span) => niceStep(span)))
+      .toEqual([0.5, 0.2, 0.2, 0.1, 0.1, 0.1, 0.1, 0.05, 0.5, 1]);
+  });
+
+  it('refuses a span that is not positive and finite', () => {
+    expect(() => niceStep(0)).toThrow(RangeError);
+    expect(() => niceStep(Number.NaN)).toThrow(RangeError);
   });
 });

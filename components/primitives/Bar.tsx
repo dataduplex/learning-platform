@@ -7,6 +7,8 @@ export const BAR_MAX_WIDTH = 24;
 export const BAR_RADIUS = 4;
 /** Neighbouring histogram bins are separated by a gap in the surface colour. */
 export const BIN_GAP = 2;
+/** Two bars sharing a slot sit this many pixels either side of its centre, BIN_GAP apart. */
+export const PAIR_OFFSET = (BAR_MAX_WIDTH + BIN_GAP) / 2;
 
 /**
  * A bar in pixels whose length runs along `axis` from `from` to `to`, between `side0` and `side1`

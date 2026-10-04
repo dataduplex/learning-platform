@@ -152,7 +152,42 @@ export function wholeTicks(domain: readonly [number, number], step: number): Tic
   if (!Number.isInteger(step) || step <= 0) {
     throw new RangeError(`Whole-number ticks need a positive whole step, not ${step}.`);
   }
-  return ticksFor(domain, step).map((at) => ({ at, label: formatFixed(at, 0) }));
+  return stepTicks(domain, step);
+}
+
+/** The fewest decimals that write `step` exactly. */
+function stepDigits(step: number): number {
+  for (let digits = 0; digits <= 10; digits += 1) {
+    if (Number(step.toFixed(digits)) === step) return digits;
+  }
+  throw new RangeError(`A tick step needs at most ten decimals, not ${step}.`);
+}
+
+/** A tick at each multiple of `step` inside the domain, written to the step's decimals without trailing zeros. */
+export function stepTicks(domain: readonly [number, number], step: number): Tick[] {
+  if (!(step > 0) || !Number.isFinite(step)) {
+    throw new RangeError(`Ticks need a positive finite step, not ${step}.`);
+  }
+  const digits = stepDigits(step);
+  return ticksFor(domain, step).map((at) => {
+    const written = formatFixed(at, digits);
+    return { at, label: digits === 0 ? written : written.replace(/\.?0+$/, '') };
+  });
+}
+
+/** The ticks of an axis that spans the whole probability scale. */
+export const PROBABILITY_TICKS: readonly Tick[] = stepTicks([0, 1], 0.25);
+
+/** One, two or five times a power of ten, whichever splits `span` most nearly into `intervals`. */
+export function niceStep(span: number, intervals = 5): number {
+  if (!(span > 0) || !Number.isFinite(span)) {
+    throw new RangeError(`A tick step needs a positive finite span, not ${span}.`);
+  }
+  const rough = span / intervals;
+  const power = 10 ** Math.floor(Math.log10(rough));
+  const ratio = rough / power;
+  const factor = ratio >= Math.sqrt(50) ? 10 : ratio >= Math.sqrt(10) ? 5 : ratio >= Math.sqrt(2) ? 2 : 1;
+  return Number((factor * power).toFixed(10));
 }
 
 /**

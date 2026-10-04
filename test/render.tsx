@@ -45,6 +45,26 @@ export function pathPoints(path: Element | null): [number, number][] {
     .map((match) => [Number(match[1]), Number(match[2])]);
 }
 
+/** Every vertex of a path written with absolute M, L and A commands, an arc's being its end point. */
+export function pathVertices(path: Element | null): [number, number][] {
+  const d = path?.getAttribute('d') ?? '';
+  return [...d.matchAll(/([MLA])([^MLAZ]*)/g)].map(([, command, args]) => {
+    const values = (args ?? '').trim().split(/[ ,]+/).map(Number);
+    const [x, y] = command === 'A' ? values.slice(5) : values;
+    if (x === undefined || y === undefined) throw new Error(`"${d}" has a ${command ?? '?'} without a point`);
+    return [x, y];
+  });
+}
+
+/** The box a path's vertices span. */
+export function pathBox(path: Element | null): PixelBox {
+  const vertices = pathVertices(path);
+  if (vertices.length === 0) throw new Error(`no path: ${path?.outerHTML ?? 'null'}`);
+  const xs = vertices.map(([x]) => x);
+  const ys = vertices.map(([, y]) => y);
+  return { left: Math.min(...xs), top: Math.min(...ys), right: Math.max(...xs), bottom: Math.max(...ys) };
+}
+
 /** The first point of a path: an arrowhead's tip. */
 export function tip(path: Element | null): [number, number] {
   const first = pathPoints(path)[0];
