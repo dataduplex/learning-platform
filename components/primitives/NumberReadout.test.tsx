@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { LabelSymbol, NumberReadout, formatFixed, formatScientific } from './NumberReadout';
+import { LabelSymbol, NumberReadout, formatFixed, formatScientific, groupThousands } from './NumberReadout';
 
 describe('formatFixed', () => {
   it('pads to a fixed width so a value cannot shift the layout', () => {
@@ -33,6 +33,16 @@ describe('formatScientific', () => {
   });
 });
 
+describe('groupThousands', () => {
+  it('puts a comma between each group of three digits in the whole part only', () => {
+    expect(groupThousands('2000')).toBe('2,000');
+    expect(groupThousands('-1234567.8912')).toBe('-1,234,567.8912');
+    expect(groupThousands('999')).toBe('999');
+    expect(groupThousands('0.0001')).toBe('0.0001');
+    expect(groupThousands('-')).toBe('-');
+  });
+});
+
 describe('NumberReadout', () => {
   it('pairs a label with its value', () => {
     render(<NumberReadout label="cosine" value={0.7071} digits={3} />);
@@ -55,6 +65,15 @@ describe('NumberReadout', () => {
     render(<NumberReadout label="norm" value={5} digits={2} />);
     expect(document.querySelector('dt')).toHaveTextContent('norm');
     expect(document.querySelector('dd')).toHaveTextContent('5.00');
+  });
+
+  it('groups the whole part in threes only when asked', () => {
+    const { rerender } = render(<NumberReadout label="step" value={2000} digits={0} testId="n" />);
+    expect(screen.getByTestId('n').textContent).toBe('2000');
+    rerender(<NumberReadout label="step" value={2000} digits={0} grouped testId="n" />);
+    expect(screen.getByTestId('n').textContent).toBe('2,000');
+    rerender(<NumberReadout label="step" value={-1234.5} digits={2} grouped testId="n" />);
+    expect(screen.getByTestId('n').textContent).toBe('-1,234.50');
   });
 
   it('formats in scientific notation when asked', () => {

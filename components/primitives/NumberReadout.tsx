@@ -24,6 +24,11 @@ export function formatScientific(value: number, digits: number): string {
   return `${mantissa} × 10${written}`;
 }
 
+/** A comma between each group of three digits in a written number's whole part. */
+export function groupThousands(text: string): string {
+  return text.replace(/^([-−+]?)(\d+)/u, (_, sign: string, whole: string) => sign + whole.replace(/\B(?=(\d{3})+$)/gu, ','));
+}
+
 /** Keeps a math symbol's case inside a label the stylesheet sets in capitals. */
 export function LabelSymbol({ children }: { children: ReactNode }) {
   return <span className="label-symbol">{children}</span>;
@@ -35,6 +40,7 @@ export function NumberReadout({
   digits = 2,
   format = 'fixed',
   unit,
+  grouped = false,
   testId,
 }: {
   label: ReactNode;
@@ -42,10 +48,13 @@ export function NumberReadout({
   digits?: number;
   format?: 'fixed' | 'scientific';
   unit?: string;
+  /** Commas between groups of three digits in the whole part. */
+  grouped?: boolean;
   /** Put on the number itself, for a test that needs the value and not the label. */
   testId?: string;
 }) {
-  const text = format === 'scientific' ? formatScientific(value, digits) : formatFixed(value, digits);
+  const written = format === 'scientific' ? formatScientific(value, digits) : formatFixed(value, digits);
+  const text = grouped ? groupThousands(written) : written;
   return (
     <div className="readout">
       <dt className="readout-label">{label}</dt>

@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 
-const NUMBER = /^[-−+]?(?:\d+(?:\.\d+)?|\.\d+)(?: × 10[⁻⁺]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+)?$/u;
+/** A number, its whole part optionally grouped in threes by commas, in scientific notation or as a percentage. */
+const NUMBER = /^[-−+]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+)(?: × 10[⁻⁺]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+|%)?$/u;
 
 /** Whether every cell in each column is a number, so that column aligns on the right. */
 export function numericColumns(columns: readonly string[], rows: readonly (readonly string[])[]): boolean[] {

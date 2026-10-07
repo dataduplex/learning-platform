@@ -60,6 +60,13 @@ describe('TableView', () => {
     expect(aligned(screen.getAllByRole('columnheader'))).toEqual([false, true, true]);
     expect(aligned(screen.getAllByRole('cell'))).toEqual([false, true, true, false, true, true]);
   });
+
+  it('right-aligns a percentage column and a column of numbers grouped in threes', () => {
+    render(<TableView caption="c" columns={['step', 'accuracy']} rows={[['1,000', '43%'], ['20', '100%']]} />);
+    const aligned = (cells: readonly Element[]) => cells.map((cell) => cell.classList.contains('table-view-number'));
+    expect(aligned(screen.getAllByRole('columnheader'))).toEqual([true, true]);
+    expect(aligned(screen.getAllByRole('cell'))).toEqual([true, true, true, true]);
+  });
 });
 
 describe('numericColumns', () => {
@@ -67,5 +74,12 @@ describe('numericColumns', () => {
     expect(numericColumns(['a', 'b', 'c', 'd'], [['1', '−0.5', '0 (tails)', '.25'], ['-2', '3', '1 (heads)', '+4']]))
       .toEqual([true, true, false, true]);
     expect(numericColumns(['a'], [])).toEqual([false]);
+  });
+
+  it('takes a trailing percent sign and commas between groups of three as part of a number', () => {
+    expect(numericColumns(['a', 'b', 'c'], [['43%', '1,000', '−12,345.5'], ['-0.5%', '2,000,000', '999']]))
+      .toEqual([true, true, true]);
+    expect(numericColumns(['a', 'b', 'c', 'd', 'e', 'f'], [['1,0000', ',100', '1,00', '1234,567', '43 %', '%']]))
+      .toEqual([false, false, false, false, false, false]);
   });
 });
