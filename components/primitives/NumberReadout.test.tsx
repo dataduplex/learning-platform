@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { LabelSymbol, NumberReadout, formatFixed, formatScientific, groupThousands } from './NumberReadout';
+import {
+  LabelSymbol, NumberReadout, ReadoutGroup, formatFixed, formatScientific, groupThousands,
+} from './NumberReadout';
 
 describe('formatFixed', () => {
   it('pads to a fixed width so a value cannot shift the layout', () => {
@@ -54,6 +56,17 @@ describe('NumberReadout', () => {
     render(<NumberReadout label="angle" value={45} digits={1} unit="degrees" />);
     expect(screen.getByText('45.0')).toBeInTheDocument();
     expect(screen.getByText('degrees')).toBeInTheDocument();
+  });
+
+  it('sets a percent sign against the number and any other unit a space after it', () => {
+    render(
+      <ReadoutGroup>
+        <NumberReadout label="accuracy" value={85} digits={0} unit="%" />
+        <NumberReadout label="angle" value={45} digits={1} unit="degrees" />
+      </ReadoutGroup>,
+    );
+    const values = [...document.querySelectorAll('dd')].map((each) => each.textContent);
+    expect(values).toEqual(['85%', '45.0\u00a0degrees']);
   });
 
   it('puts an optional test id on the number, not the label', () => {

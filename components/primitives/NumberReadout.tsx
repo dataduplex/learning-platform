@@ -34,6 +34,9 @@ export function LabelSymbol({ children }: { children: ReactNode }) {
   return <span className="label-symbol">{children}</span>;
 }
 
+/** Units set against the number with no space, as in 85%. */
+const ATTACHED_UNITS: ReadonlySet<string> = new Set(['%']);
+
 export function NumberReadout({
   label,
   value,
@@ -60,7 +63,9 @@ export function NumberReadout({
       <dt className="readout-label">{label}</dt>
       <dd className="readout-value">
         <span className="readout-number" data-testid={testId}>{text}</span>
-        {unit === undefined ? null : <span className="readout-unit">{unit}</span>}
+        {unit === undefined ? null : (
+          <span className="readout-unit">{ATTACHED_UNITS.has(unit) ? unit : `\u00a0${unit}`}</span>
+        )}
       </dd>
     </div>
   );
