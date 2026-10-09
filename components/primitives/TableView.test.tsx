@@ -82,4 +82,11 @@ describe('numericColumns', () => {
     expect(numericColumns(['a', 'b', 'c', 'd', 'e', 'f'], [['1,0000', ',100', '1,00', '1234,567', '43 %', '%']]))
       .toEqual([false, false, false, false, false, false]);
   });
+
+  it('throws on a row with more or fewer cells than columns, naming the row', () => {
+    expect(() => numericColumns(['a', 'b'], [['1', '2'], ['3']]))
+      .toThrow('The row ["3"] does not fit the columns ["a","b"].');
+    expect(() => numericColumns(['a', 'b'], [['1', '2', '3']]))
+      .toThrow('The row ["1","2","3"] does not fit the columns ["a","b"].');
+  });
 });

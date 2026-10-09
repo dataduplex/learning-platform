@@ -7,7 +7,14 @@ const NUMBER = /^[-−+]?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+)(?: × 10
 
 /** Whether every cell in each column is a number, so that column aligns on the right. */
 export function numericColumns(columns: readonly string[], rows: readonly (readonly string[])[]): boolean[] {
-  return columns.map((_, index) => rows.length > 0 && rows.every((row) => NUMBER.test(row[index] ?? '')));
+  const numeric = columns.map(() => rows.length > 0);
+  for (const row of rows) {
+    if (row.length !== columns.length) {
+      throw new RangeError(`The row ${JSON.stringify(row)} does not fit the columns ${JSON.stringify(columns)}.`);
+    }
+    for (const [index, cell] of row.entries()) if (!NUMBER.test(cell)) numeric[index] = false;
+  }
+  return numeric;
 }
 
 /**

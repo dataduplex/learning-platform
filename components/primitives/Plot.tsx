@@ -3,7 +3,7 @@
 import { useId, type ReactNode } from 'react';
 import { formatFixed } from './NumberReadout';
 
-/** The shared size of a data chart: the widget card's content width, at the old 480 by 300 aspect. */
+/** The shared size of a data chart: the widget card's content width, at an 8 by 5 aspect. */
 export const CHART_WIDTH = 598;
 export const CHART_HEIGHT = 374;
 

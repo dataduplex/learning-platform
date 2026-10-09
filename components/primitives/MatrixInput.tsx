@@ -25,6 +25,9 @@ export function MatrixInput({
   columnLabels?: readonly string[];
 }) {
   const id = useId();
+  if (columnLabels !== undefined && columnLabels.length !== value.cols) {
+    throw new RangeError(`${columnLabels.length} column labels do not fit the ${value.cols} columns of ${label}.`);
+  }
 
   function setCell(row: number, column: number, raw: string): void {
     const rows = toRows(value);

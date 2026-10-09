@@ -96,6 +96,12 @@ describe('MatrixInput', () => {
     expect(screen.getByLabelText('Logits floor')).toHaveValue(0.3);
   });
 
+  it('throws when the column labels do not match the columns, naming both counts', () => {
+    expect(() => render(
+      <MatrixInput label="Logits" value={matFrom([[0.5, 0.3]])} onChange={() => {}} columnLabels={['mat']} />,
+    )).toThrow('1 column labels do not fit the 2 columns of Logits.');
+  });
+
   it('clamps typed values to the min and max', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
