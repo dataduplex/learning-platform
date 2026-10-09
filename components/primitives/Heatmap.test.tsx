@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { matFrom } from '@/lib/linalg';
-import { DIVERGING_MID, divergingScale } from '@/lib/palette';
+import { DIVERGING_MID, SEQUENTIAL_BLUE, divergingScale, inkOn } from '@/lib/palette';
 import { Heatmap } from './Heatmap';
 
 const matrix = matFrom([[-1, 0], [2, 5]]);
@@ -38,6 +38,45 @@ describe('Heatmap', () => {
     expect(labels).toEqual(['k1', 'k2', 'q1', 'q2']);
   });
 
+  it('leaves room for one glyph beside one-glyph row labels', () => {
+    const tall = matFrom(Array.from({ length: 8 }, () => [0, 0, 0, 0, 0, 0]));
+    render(
+      <Heatmap
+        matrix={tall}
+        colorFor={colorFor}
+        caption="c"
+        cellSize={26}
+        rowLabels={['1', '2', '3', '4', '5', '6', '7', '8']}
+      />,
+    );
+    // 8 of edge, 6 for the glyph and 10 to the grid, then 6 columns of 26 and 8 of edge.
+    expect(document.querySelector('.heatmap-svg')).toHaveAttribute('width', '188');
+    expect(document.querySelector('.heatmap-label')).toHaveAttribute('x', '14');
+    expect(document.querySelector('[data-role="cell"]')).toHaveAttribute('x', '25');
+  });
+
+  it('sizes the row-label gutter to its longest label', () => {
+    render(<Heatmap matrix={matrix} colorFor={colorFor} caption="c" rowLabels={['q1', 'q10']} />);
+    // 8 of edge, 3 glyphs of 6 and 10 to the grid, then 2 columns of 34 and 8 of edge.
+    expect(document.querySelector('.heatmap-svg')).toHaveAttribute('width', '112');
+    expect(document.querySelector('.heatmap-label')).toHaveAttribute('x', '26');
+  });
+
+  it('sets its colour key directly under the cells, from the grid\'s left edge across its columns', () => {
+    const stops = Array.from({ length: 7 }, (_, step) => ({ color: colorFor(step - 1) }));
+    render(
+      <Heatmap matrix={matrix} colorFor={colorFor} caption="c" rowLabels={['q1', 'q10']} colorKey={{ caption: 'Value', stops }} />,
+    );
+    const key = document.querySelector('.heatmap-key') as HTMLElement;
+    expect([key.previousElementSibling?.getAttribute('class'), key.nextElementSibling?.getAttribute('class')])
+      .toEqual(['heatmap-svg', 'heatmap-caption']);
+    // The grid starts after 8 of edge, 3 glyphs of 6 and 10 to it; 2 columns of 34 span 68,
+    // which 7 swatches of 8 and 6 gaps of 2 fill.
+    expect(key.style.marginLeft).toBe('36px');
+    expect((key.querySelector('.color-key-row') as HTMLElement).style.width).toBe('68px');
+    expect((key.querySelector('.color-key-stop') as HTMLElement).style.width).toBe('8px');
+  });
+
   it('always ships the table view, so the numbers are reachable without color', async () => {
     const user = userEvent.setup();
     render(<Heatmap matrix={matrix} colorFor={colorFor} caption="Attention weights" />);
@@ -70,5 +109,22 @@ describe('Heatmap', () => {
     render(<Heatmap matrix={matrix} colorFor={colorFor} caption="c" showValues digits={1} />);
     const values = [...document.querySelectorAll('.heatmap-value')].map((n) => n.textContent);
     expect(values).toEqual(['-1.0', '0.0', '2.0', '5.0']);
+  });
+
+  it('wears ink that reads well on its fill, so no halo is needed', () => {
+    const darkCell = matFrom([[1]]);
+    const darkColor = SEQUENTIAL_BLUE[12] as string;
+    render(
+      <Heatmap
+        matrix={darkCell}
+        colorFor={() => darkColor}
+        caption="c"
+        showValues
+      />,
+    );
+    const cell = document.querySelector('[data-role="cell"]');
+    const value = document.querySelector('.heatmap-value');
+    expect(cell).toHaveAttribute('fill', darkColor);
+    expect(value).toHaveAttribute('fill', inkOn(darkColor));
   });
 });

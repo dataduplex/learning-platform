@@ -17,11 +17,22 @@ function renderHandle(value: [number, number] = [2, 1], onChange = vi.fn(), step
 
 describe('VectorHandle', () => {
   it('draws an arrow from the origin to the value', () => {
-    renderHandle([2, 1]);
+    renderHandle([4, 0]);
     const line = document.querySelector('[data-role="vector-shaft"]') as SVGLineElement;
     expect(Number(line.getAttribute('x1'))).toBeCloseTo(scales.x(0), 6);
-    expect(Number(line.getAttribute('x2'))).toBeCloseTo(scales.x(2), 6);
-    expect(Number(line.getAttribute('y2'))).toBeCloseTo(scales.y(1), 6);
+    const head = document.querySelector('[data-role="vector-head"]') as SVGPathElement;
+    const d = head.getAttribute('d') ?? '';
+    const tipX = Number(d.match(/^M([\d.]+),/)?.[1]);
+    // The shaft ends where the head begins, not at the tip.
+    expect(Number(line.getAttribute('x2'))).toBeLessThan(tipX);
+  });
+
+  it('shows its direction with a head and its handle with a hollow ring', () => {
+    renderHandle([4, 0]);
+    expect(document.querySelector('path[data-role="vector-head"]')).not.toBeNull();
+    const ring = document.querySelector('[data-role="vector-tip"]');
+    expect(ring).toHaveAttribute('fill', 'none');
+    expect(Number(document.querySelector('.vector-grab')?.getAttribute('r'))).toBeGreaterThanOrEqual(12);
   });
 
   it('carries its coordinates in its accessible name', () => {

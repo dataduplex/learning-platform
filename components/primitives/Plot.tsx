@@ -1,6 +1,11 @@
 'use client';
 
 import { useId, type ReactNode } from 'react';
+import { formatFixed } from './NumberReadout';
+
+/** The shared size of a data chart: the widget card's content width, at an 8 by 5 aspect. */
+export const CHART_WIDTH = 598;
+export const CHART_HEIGHT = 374;
 
 export interface Box {
   left: number;
@@ -82,6 +87,60 @@ export function polylinePoints(points: Iterable<readonly [number, number]>): str
   return parts.join(' ');
 }
 
+/** A labelled position on an axis, in data units. */
+export interface Tick {
+  readonly at: number;
+  readonly label: ReactNode;
+}
+
+/**
+ * Offsets from the data box, in pixels. The x title sits a full row below the tick
+ * values, so a centred title can never read as the middle tick's second line.
+ */
+export const PLOT_LAYOUT = {
+  tickRow: 16,
+  titleRow: 22,
+  yTickGap: 8,
+  /** Room for y tick text of up to six characters at 11px. */
+  yTickReserve: 36,
+  /** From the y title's baseline to the tick column. */
+  yTitleGap: 8,
+} as const;
+
+/** An 11px line box reaches about 10px above the baseline. */
+const Y_TITLE_ASCENT = 12;
+
+export interface PlotPadding {
+  readonly top: number;
+  readonly right: number;
+  readonly bottom: number;
+  readonly left: number;
+}
+
+/** Each side grows by what it draws and never shrinks below the base padding. */
+export function plotPadding(
+  draws: { readonly xTicks: boolean; readonly xLabel: boolean; readonly yTicks: boolean; readonly yLabel: boolean },
+  base = 36,
+): PlotPadding {
+  const { tickRow, titleRow, yTickGap, yTickReserve, yTitleGap } = PLOT_LAYOUT;
+  const bottom = draws.xTicks && draws.xLabel ? tickRow + titleRow + 10
+    : draws.xTicks || draws.xLabel ? tickRow + 10 : 0;
+  const yTitleRoom = yTitleGap + Y_TITLE_ASCENT;
+  const left = draws.yTicks ? yTickGap + yTickReserve + (draws.yLabel ? yTitleRoom : 4)
+    : draws.yLabel ? yTickGap + yTitleRoom : 0;
+  return { top: base, right: base, bottom: Math.max(base, bottom), left: Math.max(base, left) };
+}
+
+/** Ten to a power, for a log axis. The zeroth power writes 1. */
+export function decadeLabel(exponent: number): ReactNode {
+  if (exponent === 0) return '1';
+  return (
+    <>
+      10<tspan dy="-4" fontSize="8">{exponent < 0 ? `−${-exponent}` : String(exponent)}</tspan>
+    </>
+  );
+}
+
 /** Multiples of `step` inside the closed domain. */
 function ticksFor(domain: readonly [number, number], step: number): number[] {
   const [low, high] = domain;
@@ -92,6 +151,49 @@ function ticksFor(domain: readonly [number, number], step: number): number[] {
     ticks.push(Number(value.toFixed(10)));
   }
   return ticks;
+}
+
+/** A tick at each multiple of a whole-number `step` inside the domain, labelled as a whole number. */
+export function wholeTicks(domain: readonly [number, number], step: number): Tick[] {
+  if (!Number.isInteger(step) || step <= 0) {
+    throw new RangeError(`Whole-number ticks need a positive whole step, not ${step}.`);
+  }
+  return stepTicks(domain, step);
+}
+
+/** The fewest decimals that write `step` exactly. */
+function stepDigits(step: number): number {
+  for (let digits = 0; digits <= 10; digits += 1) {
+    if (Number(step.toFixed(digits)) === step) return digits;
+  }
+  throw new RangeError(`A tick step needs at most ten decimals, not ${step}.`);
+}
+
+/** A tick at each multiple of `step` inside the domain, written to the step's decimals without trailing zeros. */
+export function stepTicks(domain: readonly [number, number], step: number): Tick[] {
+  if (!(step > 0) || !Number.isFinite(step)) {
+    throw new RangeError(`Ticks need a positive finite step, not ${step}.`);
+  }
+  const digits = stepDigits(step);
+  return ticksFor(domain, step).map((at) => {
+    const written = formatFixed(at, digits);
+    return { at, label: digits === 0 ? written : written.replace(/\.?0+$/, '') };
+  });
+}
+
+/** The ticks of an axis that spans the whole probability scale. */
+export const PROBABILITY_TICKS: readonly Tick[] = stepTicks([0, 1], 0.25);
+
+/** One, two or five times a power of ten, whichever splits `span` most nearly into `intervals`. */
+export function niceStep(span: number, intervals = 5): number {
+  if (!(span > 0) || !Number.isFinite(span)) {
+    throw new RangeError(`A tick step needs a positive finite span, not ${span}.`);
+  }
+  const rough = span / intervals;
+  const power = 10 ** Math.floor(Math.log10(rough));
+  const ratio = rough / power;
+  const factor = ratio >= Math.sqrt(50) ? 10 : ratio >= Math.sqrt(10) ? 5 : ratio >= Math.sqrt(2) ? 2 : 1;
+  return Number((factor * power).toFixed(10));
 }
 
 /**
@@ -109,42 +211,87 @@ export interface PlotProps {
   width?: number;
   height?: number;
   padding?: number;
-  /** Gridline spacing in data units. Omit for no grid. */
-  gridStep?: number;
+  /** Gridline spacing in data units: one spacing, or `{ x, y }` to space each axis separately. Omit for no grid. */
+  gridStep?: number | { x: number; y: number };
   gridAxis?: GridAxis;
   aspect?: Aspect;
+  xTicks?: readonly Tick[];
+  yTicks?: readonly Tick[];
   xLabel?: string;
   yLabel?: string;
   children?: (scales: PlotScales) => ReactNode;
 }
 
-export function Plot({
-  title,
-  description,
+/** The props that decide where a Plot puts its data. */
+export type PlotLayout = Pick<
+  PlotProps,
+  'xDomain' | 'yDomain' | 'width' | 'height' | 'padding' | 'aspect' | 'xTicks' | 'yTicks' | 'xLabel' | 'yLabel'
+>;
+
+const DEFAULT_WIDTH = 420;
+const DEFAULT_HEIGHT = 360;
+
+/** The scales a Plot with this layout draws with. */
+export function plotScales({
   xDomain,
   yDomain,
-  width = 420,
-  height = 360,
+  width = DEFAULT_WIDTH,
+  height = DEFAULT_HEIGHT,
   padding = 36,
-  gridStep,
-  gridAxis = 'both',
   aspect = 'fill',
+  xTicks,
+  yTicks,
   xLabel,
   yLabel,
-  children,
-}: PlotProps) {
-  const id = useId();
+}: PlotLayout): PlotScales {
+  const pad = plotPadding(
+    {
+      xTicks: (xTicks?.length ?? 0) > 0,
+      xLabel: xLabel !== undefined,
+      yTicks: (yTicks?.length ?? 0) > 0,
+      yLabel: yLabel !== undefined,
+    },
+    padding,
+  );
   const box: Box = {
-    left: padding,
-    top: padding,
-    width: width - padding * 2,
-    height: height - padding * 2,
+    left: pad.left,
+    top: pad.top,
+    width: width - pad.left - pad.right,
+    height: height - pad.top - pad.bottom,
   };
-  const scales = createScales(xDomain, yDomain, box, aspect);
-  const { inner } = scales;
+  return createScales(xDomain, yDomain, box, aspect);
+}
 
-  const xTicks = gridStep === undefined || gridAxis === 'y' ? [] : ticksFor(xDomain, gridStep);
-  const yTicks = gridStep === undefined || gridAxis === 'x' ? [] : ticksFor(yDomain, gridStep);
+export function Plot(props: PlotProps) {
+  const {
+    title,
+    description,
+    xDomain,
+    yDomain,
+    width = DEFAULT_WIDTH,
+    height = DEFAULT_HEIGHT,
+    gridStep,
+    gridAxis = 'both',
+    xTicks,
+    yTicks,
+    xLabel,
+    yLabel,
+    children,
+  } = props;
+  const id = useId();
+  const hasXTicks = (xTicks?.length ?? 0) > 0;
+  const hasYTicks = (yTicks?.length ?? 0) > 0;
+  const scales = plotScales(props);
+  const { inner } = scales;
+  const bottom = inner.top + inner.height;
+  const { tickRow, titleRow, yTickGap, yTickReserve, yTitleGap } = PLOT_LAYOUT;
+  const yTitleX = pixel(inner.left - yTickGap - (hasYTicks ? yTickReserve : 0) - yTitleGap);
+  const yTitleY = pixel(inner.top + inner.height / 2);
+
+  const xGridStep = typeof gridStep === 'number' ? gridStep : gridStep?.x;
+  const yGridStep = typeof gridStep === 'number' ? gridStep : gridStep?.y;
+  const xGridTicks = xGridStep === undefined || gridAxis === 'y' ? [] : ticksFor(xDomain, xGridStep);
+  const yGridTicks = yGridStep === undefined || gridAxis === 'x' ? [] : ticksFor(yDomain, yGridStep);
   const showZeroX = xDomain[0] <= 0 && 0 <= xDomain[1];
   const showZeroY = yDomain[0] <= 0 && 0 <= yDomain[1];
 
@@ -161,7 +308,16 @@ export function Plot({
       <title id={`${id}-title`}>{title}</title>
       {description === undefined ? null : <desc id={`${id}-desc`}>{description}</desc>}
 
-      {xTicks.filter((tick) => tick !== 0 || !showZeroX).map((tick) => (
+      <rect
+        className="plot-frame"
+        data-role="data-box"
+        x={pixel(inner.left)}
+        y={pixel(inner.top)}
+        width={pixel(inner.width)}
+        height={pixel(inner.height)}
+      />
+
+      {xGridTicks.filter((tick) => tick !== 0 || !showZeroX).map((tick) => (
         <line
           key={`vx-${tick}`}
           data-role="gridline"
@@ -172,7 +328,7 @@ export function Plot({
           y2={inner.top + inner.height}
         />
       ))}
-      {yTicks.filter((tick) => tick !== 0 || !showZeroY).map((tick) => (
+      {yGridTicks.filter((tick) => tick !== 0 || !showZeroY).map((tick) => (
         <line
           key={`hy-${tick}`}
           data-role="gridline"
@@ -205,18 +361,50 @@ export function Plot({
         />
       ) : null}
 
+      {xTicks?.map((tick) => (
+        <text
+          key={`xt-${tick.at}`}
+          className="plot-tick"
+          data-axis="x"
+          x={pixel(scales.x(tick.at))}
+          y={pixel(bottom + tickRow)}
+          textAnchor="middle"
+        >
+          {tick.label}
+        </text>
+      ))}
+      {yTicks?.map((tick) => (
+        <text
+          key={`yt-${tick.at}`}
+          className="plot-tick"
+          data-axis="y"
+          x={pixel(inner.left - yTickGap)}
+          y={pixel(scales.y(tick.at) + 4)}
+          textAnchor="end"
+        >
+          {tick.label}
+        </text>
+      ))}
+
       {xLabel === undefined ? null : (
-        <text className="plot-axis-label" x={inner.left + inner.width / 2} y={height - 6} textAnchor="middle">
+        <text
+          className="plot-axis-label"
+          data-axis="x"
+          x={pixel(inner.left + inner.width / 2)}
+          y={pixel(bottom + (hasXTicks ? tickRow + titleRow : tickRow))}
+          textAnchor="middle"
+        >
           {xLabel}
         </text>
       )}
       {yLabel === undefined ? null : (
         <text
           className="plot-axis-label"
-          x={12}
-          y={inner.top + inner.height / 2}
+          data-axis="y"
+          x={yTitleX}
+          y={yTitleY}
           textAnchor="middle"
-          transform={`rotate(-90 12 ${inner.top + inner.height / 2})`}
+          transform={`rotate(-90 ${yTitleX} ${yTitleY})`}
         >
           {yLabel}
         </text>

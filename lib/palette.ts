@@ -2,17 +2,93 @@ export type Mode = 'light' | 'dark';
 
 export type StatusKind = 'good' | 'warning' | 'serious' | 'critical';
 
+type Rgb = readonly [number, number, number];
+
+function toLinear(channel: number): number {
+  const v = channel / 255;
+  return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+}
+
+function fromLinear(v: number): number {
+  const c = v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055;
+  return c * 255;
+}
+
+function linearToOklab([r, g, b]: Rgb): Rgb {
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ];
+}
+
+function oklabToLinear([lightness, a, b]: Rgb): Rgb {
+  const l = (lightness + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m = (lightness - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (lightness - 0.0894841775 * a - 1.291485548 * b) ** 3;
+  return [
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+  ];
+}
+
+function oklabOf(hex: string): Rgb {
+  const [r, g, b] = parseHex(hex);
+  return linearToOklab([toLinear(r), toLinear(g), toLinear(b)]);
+}
+
+export function oklabLightness(hex: string): number {
+  return oklabOf(hex)[0];
+}
+
+export function oklchChroma(hex: string): number {
+  const [, a, b] = oklabOf(hex);
+  return Math.hypot(a, b);
+}
+
+function linearToHex([r, g, b]: Rgb): string {
+  const channel = (v: number) => fromLinear(Math.min(1, Math.max(0, v)));
+  return toHex([channel(r), channel(g), channel(b)]);
+}
+
+/** An OKLCH colour as hex, with its chroma reduced until it fits the sRGB gamut. */
+function oklchToHex(lightness: number, chroma: number, hue: number): string {
+  for (let c = chroma; c > 0; c -= 0.002) {
+    const linear = oklabToLinear([lightness, c * Math.cos(hue), c * Math.sin(hue)]);
+    if (linear.every((v) => v >= -1e-9 && v <= 1 + 1e-9)) return linearToHex(linear);
+  }
+  return linearToHex(oklabToLinear([lightness, 0, 0]));
+}
+
+function relativeLuminance(hex: string): number {
+  const [r, g, b] = parseHex(hex);
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
+
+export function contrastRatio(a: string, b: string): number {
+  const [light, dark] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x) as [number, number];
+  return (light + 0.05) / (dark + 0.05);
+}
+
+const DARK_INK = '#0b0b0b';
+const LIGHT_INK = '#ffffff';
+
+/** The ink that reads better on a fill. A fill that is not a hex colour gets the page ink. */
+export function inkOn(fill: string): string {
+  if (!/^#[0-9a-f]{6}$/i.test(fill)) return 'var(--ink-primary)';
+  return contrastRatio(DARK_INK, fill) >= contrastRatio(LIGHT_INK, fill) ? DARK_INK : LIGHT_INK;
+}
+
 /** The reference palette's blue ramp, steps 100 through 700. */
 export const SEQUENTIAL_BLUE = [
   '#cde2fb', '#b7d3f6', '#9ec5f4', '#86b6ef', '#6da7ec', '#5598e7', '#3987e5',
   '#2a78d6', '#256abf', '#1c5cab', '#184f95', '#104281', '#0d366b',
 ] as const;
 
-/** Index bounds that keep an ordinal ramp distinguishable from its surface. */
-const ORDINAL_BOUNDS: Record<Mode, readonly [number, number]> = {
-  light: [3, 12],
-  dark: [0, 10],
-};
 
 export const DIVERGING_MID: Record<Mode, string> = {
   light: '#f0efec',
@@ -84,7 +160,7 @@ export function divergingScale(
     const t = (i + 1) / arms;
     return rampStep(mode === 'dark' ? 1 - t : t);
   });
-  const warmArm = warmSteps(mode, arms);
+  const warmArm = warmSteps(mode, coolArm);
 
   return (value) => {
     if (halfRange === 0 || value === 0) return DIVERGING_MID[mode];
@@ -94,18 +170,11 @@ export function divergingScale(
   };
 }
 
-/** Six steps from the neutral gray to the slot-8 red pole, in sRGB. */
-function warmSteps(mode: Mode, arms: number): string[] {
-  const from = parseHex(DIVERGING_MID[mode]);
-  const to = parseHex(SERIES[mode][7] as string);
-  return Array.from({ length: arms }, (_, i) => {
-    const t = (i + 1) / arms;
-    return toHex([
-      from[0] + (to[0] - from[0]) * t,
-      from[1] + (to[1] - from[1]) * t,
-      from[2] + (to[2] - from[2]) * t,
-    ]);
-  });
+/** Each warm step matches its cool partner's lightness and chroma, in the red pole's hue. */
+function warmSteps(mode: Mode, coolArm: readonly string[]): string[] {
+  const pole = oklabOf(SERIES[mode][7] as string);
+  const hue = Math.atan2(pole[2], pole[1]);
+  return coolArm.map((cool) => oklchToHex(oklabLightness(cool), oklchChroma(cool), hue));
 }
 
 function parseHex(hex: string): [number, number, number] {
@@ -120,18 +189,14 @@ function toHex(rgb: readonly [number, number, number]): string {
   return `#${rgb.map((c) => Math.round(c).toString(16).padStart(2, '0')).join('')}`;
 }
 
-/** Discrete ordered marks. Stays clear of the surface at both ends. */
-export function ordinalScale(count: number, mode: Mode): string[] {
-  const [low, high] = ORDINAL_BOUNDS[mode];
-  const available = high - low + 1;
-  if (!Number.isInteger(count) || count < 1 || count > available) {
-    throw new RangeError(
-      `An ordinal ramp in ${mode} mode holds 1 to ${available} distinct steps, received ${count}.`,
-    );
+/** Neutral contour levels, lowest first. Every level clears 3:1 against the surface, and the lowest has the most contrast. */
+export function contourScale(count: number, mode: Mode): string[] {
+  if (!Number.isInteger(count) || count < 1) {
+    throw new RangeError(`A contour ramp needs a positive integer count, received ${count}.`);
   }
-  if (count === 1) return [SEQUENTIAL_BLUE[low] as string];
+  const [strong, faint] = mode === 'light' ? [0.36, 0.64] : [0.9, 0.56];
   return Array.from({ length: count }, (_, i) => {
-    const index = low + Math.round((i / (count - 1)) * (available - 1));
-    return SEQUENTIAL_BLUE[index] as string;
+    const t = count === 1 ? 0 : i / (count - 1);
+    return oklchToHex(strong + (faint - strong) * t, 0, 0);
   });
 }

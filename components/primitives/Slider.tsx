@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useId } from 'react';
 import { formatFixed } from './NumberReadout';
 
@@ -13,7 +14,7 @@ export function Slider({
   digits = 2,
   unit,
 }: {
-  label: string;
+  label: ReactNode;
   value: number;
   min: number;
   max: number;

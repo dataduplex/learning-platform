@@ -57,4 +57,58 @@ describe('MatrixInput', () => {
     render(<MatrixInput label="A" value={matFrom([[1]])} onChange={() => {}} />);
     expect(screen.getByRole('group', { name: /A, 1 by 1/ })).toBeInTheDocument();
   });
+
+  it('renders a visible caption when given', () => {
+    render(<MatrixInput label="A" value={matFrom([[1]])} onChange={() => {}} caption="Logits" />);
+    expect(screen.getByText('Logits')).toBeInTheDocument();
+    expect(screen.getByText('Logits')).toHaveClass('matrix-input-caption');
+  });
+
+  it('brackets the cells alone, with the caption and column labels above the bracketed box', () => {
+    render(
+      <MatrixInput
+        label="Logits"
+        caption="Logits"
+        value={matFrom([[0.5, 0.3]])}
+        onChange={() => {}}
+        columnLabels={['mat', 'floor']}
+      />,
+    );
+    const group = screen.getByRole('group', { name: 'Logits' });
+    expect([...group.children].map((child) => child.className))
+      .toEqual(['matrix-input-caption', 'matrix-input-columns', 'matrix-input-cells']);
+    const bracketed = group.querySelector('.matrix-input-cells');
+    expect([...(bracketed?.children ?? [])].map((child) => child.getAttribute('aria-label'))).toEqual(['Logits mat', 'Logits floor']);
+    expect(bracketed).not.toContainElement(screen.getByText('Logits'));
+    expect(bracketed).not.toContainElement(screen.getByText('mat'));
+  });
+
+  it('names cells by column label when given', () => {
+    render(
+      <MatrixInput
+        label="Logits"
+        value={matFrom([[0.5, 0.3]])}
+        onChange={() => {}}
+        columnLabels={['mat', 'floor']}
+      />,
+    );
+    expect(screen.getByLabelText('Logits mat')).toHaveValue(0.5);
+    expect(screen.getByLabelText('Logits floor')).toHaveValue(0.3);
+  });
+
+  it('throws when the column labels do not match the columns, naming both counts', () => {
+    expect(() => render(
+      <MatrixInput label="Logits" value={matFrom([[0.5, 0.3]])} onChange={() => {}} columnLabels={['mat']} />,
+    )).toThrow('columnLabels (1) does not match the column count (2) of Logits.');
+  });
+
+  it('clamps typed values to the min and max', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<MatrixInput label="A" value={matFrom([[0]])} onChange={onChange} min={0} max={1} />);
+    const cell = screen.getByLabelText('A row 1 column 1');
+    await user.clear(cell);
+    await user.type(cell, '5');
+    expect(toRows(onChange.mock.calls.at(-1)?.[0])).toEqual([[1]]);
+  });
 });
