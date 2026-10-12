@@ -1,4 +1,3 @@
-// lib/base-path.test.ts
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 afterEach(() => {
