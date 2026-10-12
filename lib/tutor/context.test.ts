@@ -41,6 +41,17 @@ describe('loadLessonContext', () => {
     const fetcher = vi.fn(async () => { throw new TypeError('offline'); }) as unknown as typeof fetch;
     await expect(loadLessonContext('vectors-as-meaning', fetcher)).resolves.toBeNull();
   });
+
+  it('fetches the manifest from under the base path when one is configured', async () => {
+    vi.stubEnv('NEXT_PUBLIC_BASE_PATH', '/engineer/learning/ai/math');
+    vi.resetModules();
+    const { loadLessonContext: load } = await import('./context');
+    const fetcher = fetcherFor(200, CONTEXT);
+    await load('train-a-net', fetcher);
+    expect(fetcher).toHaveBeenCalledWith('/engineer/learning/ai/math/lesson-context/train-a-net.json');
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
 });
 
 describe('contextToPromptBlock', () => {

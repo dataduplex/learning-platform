@@ -1,3 +1,4 @@
+import { withBasePath } from '../base-path';
 export interface NotationSummary {
   readonly id: string;
   /** KaTeX source, no delimiters. Same field name as NotationEntry.symbol. */
@@ -32,7 +33,7 @@ export async function loadLessonContext(
   fetcher: typeof fetch = fetch,
 ): Promise<LessonContext | null> {
   try {
-    const response = await fetcher(`/lesson-context/${lessonId}.json`);
+    const response = await fetcher(withBasePath(`/lesson-context/${lessonId}.json`));
     if (!response.ok) return null;
     const payload: unknown = await response.json();
     return isLessonContext(payload) ? payload : null;
