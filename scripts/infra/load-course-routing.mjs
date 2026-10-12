@@ -3,8 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-export const COURSE_ROUTING_PATH = join(__dirname, 'course-routing.js');
+export const COURSE_ROUTING_PATH = join(dirname(fileURLToPath(import.meta.url)), 'course-routing.js');
 
 export function readCourseRoutingSource() {
   return readFileSync(COURSE_ROUTING_PATH, 'utf8');
