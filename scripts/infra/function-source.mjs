@@ -20,6 +20,9 @@ export const COMBINED_HANDLER = `function handler(event) {
  * routing and a handler that runs the allowlist first and the routing second.
  */
 export function spliceRouting(liveSource, routingSource) {
+  if (liveSource.includes(ALLOWLIST_HANDLER) || liveSource.includes('routeCourse')) {
+    throw new Error('The live source already carries the course routing.');
+  }
   const at = liveSource.indexOf(HANDLER);
   if (at === -1) throw new Error('The live source declares no "function handler(".');
   if (liveSource.indexOf(HANDLER, at + 1) !== -1) {
@@ -32,7 +35,7 @@ export function spliceRouting(liveSource, routingSource) {
 /** The first quoted IPv4 prefix before the handler, completed to an address that starts with it. */
 export function firstAllowedAddress(liveSource) {
   const beforeHandler = liveSource.slice(0, liveSource.indexOf(HANDLER));
-  const match = /['"](\d{1,3}(?:\.\d{1,3}){0,3}\.?)['"]/.exec(beforeHandler);
+  const match = /['"](\d{1,3}(?:\.\d{1,3}){2,3}\.?)['"]/.exec(beforeHandler);
   if (match === null) throw new Error('No quoted IPv4 prefix before the handler.');
   const parts = match[1].replace(/\.$/, '').split('.');
   while (parts.length < 4) parts.push('1');

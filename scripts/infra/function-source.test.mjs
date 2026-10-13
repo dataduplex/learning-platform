@@ -36,6 +36,10 @@ describe('spliceRouting', () => {
     expect(() => spliceRouting('function handler(e) {}\nfunction handler(e) {}', '')).toThrow(/more than once/);
   });
 
+  it('refuses a source that already carries the routing', () => {
+    expect(() => spliceRouting(combined, readCourseRoutingSource())).toThrow(/already carries/);
+  });
+
   it('stays far inside the runtime limit', () => {
     expect(Buffer.byteLength(combined, 'utf8')).toBeLessThan(EDGE_SIZE_LIMIT / 2);
   });
@@ -49,6 +53,11 @@ describe('firstAllowedAddress', () => {
   it('keeps a full address, and pads a prefix without a trailing dot', () => {
     expect(firstAllowedAddress("var A = ['198.51.100.7'];\nfunction handler() {}")).toBe('198.51.100.7');
     expect(firstAllowedAddress("var A = ['198.51.100'];\nfunction handler() {}")).toBe('198.51.100.1');
+  });
+
+  it('passes over a quoted literal with too few octets to be an address', () => {
+    const source = "var VERSION = '1.0';\nvar A = ['203.0.113.'];\nfunction handler() {}";
+    expect(firstAllowedAddress(source)).toBe('203.0.113.1');
   });
 
   it('refuses a source with nothing that looks like an address', () => {
