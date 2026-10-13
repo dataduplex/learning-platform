@@ -1,4 +1,4 @@
-import { aws, awsWrite, describeAws, parseFlags } from './aws.mjs';
+import { aws, awsWrite, describeAws, fail, parseFlags } from './aws.mjs';
 import { CACHE_POLICY_NAME } from './targets.mjs';
 
 /** The objects' own Cache-Control decides; nothing from the viewer reaches the key or the bucket. */
@@ -45,4 +45,4 @@ async function main() {
   console.log(`Restore: ${restore}`);
 }
 
-if (process.argv[1]?.endsWith('create-cache-policy.mjs')) await main();
+if (process.argv[1]?.endsWith('create-cache-policy.mjs')) await main().catch((error) => fail(error instanceof Error ? error.message : String(error)));

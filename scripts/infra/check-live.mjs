@@ -6,6 +6,9 @@ import {
 import { BASE_PATH, ORIGIN_URL } from './targets.mjs';
 
 const originAt = process.argv.indexOf('--origin');
+if (originAt !== -1 && process.argv[originAt + 1] === undefined) {
+  fail('--origin needs a value, for example --origin http://localhost:4322');
+}
 const origin = originAt === -1 ? ORIGIN_URL : process.argv[originAt + 1];
 const commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 

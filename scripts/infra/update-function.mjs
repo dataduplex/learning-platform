@@ -99,4 +99,4 @@ async function main() {
   }
 }
 
-if (process.argv[1]?.endsWith('update-function.mjs')) await main();
+if (process.argv[1]?.endsWith('update-function.mjs')) await main().catch((error) => fail(error instanceof Error ? error.message : String(error)));

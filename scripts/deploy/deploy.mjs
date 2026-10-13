@@ -13,8 +13,8 @@ if (profile === undefined) fail('Usage: npm run deploy -- --profile <name> [--dr
 /** Runs a command for its trimmed output; a non-zero exit is an error. */
 function output(command, args) {
   const result = spawnSync(command, args, { encoding: 'utf8' });
-  if (result.error) throw result.error;
-  if (result.status !== 0) throw new Error(`${command} ${args.join(' ')} failed:\n${result.stderr}`);
+  if (result.error) fail(result.error.message);
+  if (result.status !== 0) fail(`${command} ${args.join(' ')} failed:\n${result.stderr}`);
   return result.stdout.trim();
 }
 

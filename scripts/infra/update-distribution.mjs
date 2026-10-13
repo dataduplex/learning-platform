@@ -57,4 +57,4 @@ async function main() {
   console.log(`Deployed. Restore: ${restore}`);
 }
 
-if (process.argv[1]?.endsWith('update-distribution.mjs')) await main();
+if (process.argv[1]?.endsWith('update-distribution.mjs')) await main().catch((error) => fail(error instanceof Error ? error.message : String(error)));

@@ -134,4 +134,4 @@ async function main() {
   console.log(`Restore: delete every object version under s3://${BUCKET}, then ${deleteBucket}`);
 }
 
-if (process.argv[1]?.endsWith('create-bucket.mjs')) await main();
+if (process.argv[1]?.endsWith('create-bucket.mjs')) await main().catch((error) => fail(error instanceof Error ? error.message : String(error)));

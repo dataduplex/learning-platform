@@ -1,4 +1,4 @@
-import { aws, awsWrite, describeAws, findByName, parseFlags } from './aws.mjs';
+import { aws, awsWrite, describeAws, fail, findByName, parseFlags } from './aws.mjs';
 import { OAC_NAME } from './targets.mjs';
 
 export function oacConfig(name) {
@@ -35,4 +35,4 @@ async function main() {
   console.log(`Restore: ${restore}`);
 }
 
-if (process.argv[1]?.endsWith('create-oac.mjs')) await main();
+if (process.argv[1]?.endsWith('create-oac.mjs')) await main().catch((error) => fail(error instanceof Error ? error.message : String(error)));
