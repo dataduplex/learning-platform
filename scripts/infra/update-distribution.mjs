@@ -1,5 +1,5 @@
 import {
-  aws, awsWrite, describeAws, fail, findByName, parseFlags, sameJson, showDiff, writeSnapshot,
+  aws, awsWrite, describeAws, fail, findByName, latestSnapshot, parseFlags, sameJson, showDiff, writeSnapshot,
 } from './aws.mjs';
 import { findCachePolicy } from './create-cache-policy.mjs';
 import { listedOacs } from './create-oac.mjs';
@@ -20,9 +20,15 @@ async function main() {
   writeSnapshot(`distribution-${DISTRIBUTION_ID}.etag`, `${ETag}\n`);
   console.log(`Saved the current configuration (ETag ${ETag}) to ${snapshot}`);
 
-  const root = await probe(`${ORIGIN_URL}/`);
-  const pin = writeSnapshot('dashboard-root.json', pretty({ status: root.status, location: root.location, contentType: root.contentType }));
-  console.log(`Pinned GET / as ${root.status} ${root.location ?? ''} in ${pin}`);
+  // The first measurement is the one check-live.mjs compares against, so later runs keep it.
+  const existingPin = latestSnapshot('dashboard-root.json');
+  if (existingPin === null) {
+    const root = await probe(`${ORIGIN_URL}/`);
+    const pin = writeSnapshot('dashboard-root.json', pretty({ status: root.status, location: root.location, contentType: root.contentType }));
+    console.log(`Pinned GET / as ${root.status} ${root.location ?? ''} in ${pin}`);
+  } else {
+    console.log(`Keeping the dashboard-root pin ${existingPin}; delete it to measure again.`);
+  }
 
   const oac = findByName(listedOacs(aws(profile, ['cloudfront', 'list-origin-access-controls'])), OAC_NAME);
   if (oac === null) fail(`No origin access control named ${OAC_NAME}: run create-oac.mjs first.`);

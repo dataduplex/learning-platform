@@ -83,6 +83,27 @@ describe('courseOrigin', () => {
 describe('courseBehaviour', () => {
   const behaviour = courseBehaviour({ ...course, functionArn: FUNCTION_ARN });
 
+  it('is exactly these fields, the shape update-distribution sends', () => {
+    expect(behaviour).toEqual({
+      PathPattern: '/engineer/learning/ai/math/*',
+      TargetOriginId: 'course-bucket',
+      TrustedSigners: { Enabled: false, Quantity: 0 },
+      TrustedKeyGroups: { Enabled: false, Quantity: 0 },
+      ViewerProtocolPolicy: 'redirect-to-https',
+      AllowedMethods: {
+        Quantity: 3,
+        Items: ['GET', 'HEAD', 'OPTIONS'],
+        CachedMethods: { Quantity: 2, Items: ['GET', 'HEAD'] },
+      },
+      SmoothStreaming: false,
+      Compress: true,
+      LambdaFunctionAssociations: { Quantity: 0 },
+      FunctionAssociations: { Quantity: 1, Items: [{ FunctionARN: FUNCTION_ARN, EventType: 'viewer-request' }] },
+      FieldLevelEncryptionId: '',
+      CachePolicyId: 'P1',
+    });
+  });
+
   it('redirects to HTTPS, allows GET, HEAD and OPTIONS, compresses, and runs the same function', () => {
     expect(behaviour.PathPattern).toBe('/engineer/learning/ai/math/*');
     expect(behaviour.TargetOriginId).toBe('course-bucket');
