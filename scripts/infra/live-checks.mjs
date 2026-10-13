@@ -49,18 +49,21 @@ export function fontCheck(path) {
 
 const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+/** @returns {string} */
 export function firstChunkPath(html, basePath = BASE_PATH) {
   const match = new RegExp(`src="(${escapeRegExp(basePath)}/_next/static/chunks/[^"]+\\.js)"`).exec(html);
   if (match === null) throw new Error('No _next/static chunk in the page.');
   return match[1];
 }
 
+/** @returns {string} */
 export function stylesheetPath(html, basePath = BASE_PATH) {
   const match = new RegExp(`href="(${escapeRegExp(basePath)}/_next/static/[^"]+\\.css)"`).exec(html);
   if (match === null) throw new Error('No _next/static stylesheet in the page.');
   return match[1];
 }
 
+/** @returns {string} */
 export function katexFontPath(css, basePath = BASE_PATH) {
   let pattern = `url\\(["']?(${escapeRegExp(basePath)}/_next/static/media/KaTeX_[^"')]+\\.woff2)["']?\\)`;
   let match = new RegExp(pattern).exec(css);
