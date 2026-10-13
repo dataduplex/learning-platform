@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { contextToPromptBlock, loadLessonContext, type LessonContext } from './context';
 
 const CONTEXT: LessonContext = {
@@ -21,6 +21,11 @@ function fetcherFor(status: number, payload?: unknown) {
 }
 
 describe('loadLessonContext', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
   it('fetches the manifest for the lesson', async () => {
     const fetcher = fetcherFor(200, CONTEXT);
     await expect(loadLessonContext('vectors-as-meaning', fetcher)).resolves.toEqual(CONTEXT);
@@ -49,8 +54,6 @@ describe('loadLessonContext', () => {
     const fetcher = fetcherFor(200, CONTEXT);
     await load('train-a-net', fetcher);
     expect(fetcher).toHaveBeenCalledWith('/engineer/learning/ai/math/lesson-context/train-a-net.json');
-    vi.unstubAllEnvs();
-    vi.resetModules();
   });
 });
 

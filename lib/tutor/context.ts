@@ -1,4 +1,5 @@
 import { withBasePath } from '../base-path';
+
 export interface NotationSummary {
   readonly id: string;
   /** KaTeX source, no delimiters. Same field name as NotationEntry.symbol. */

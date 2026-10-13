@@ -68,6 +68,7 @@ export function katexFontPath(css, basePath = BASE_PATH) {
   let pattern = `url\\(["']?(${escapeRegExp(basePath)}/_next/static/media/KaTeX_[^"')]+\\.woff2)["']?\\)`;
   let match = new RegExp(pattern).exec(css);
   if (match !== null) return match[1];
+  // The stylesheet sits one level under `_next/static/`, so its `url(../media/...)` resolves there.
   pattern = `url\\(["']?\\.\\./(media/KaTeX_[^"')]+\\.woff2)["']?\\)`;
   match = new RegExp(pattern).exec(css);
   if (match === null) throw new Error('No KaTeX woff2 font in the stylesheet.');

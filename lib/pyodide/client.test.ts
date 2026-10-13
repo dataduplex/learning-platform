@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createPyodideClient } from './client';
 import type { WorkerLike } from './protocol';
 
@@ -91,6 +91,12 @@ describe('createPyodideClient', () => {
 });
 
 describe('browserWorker', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
   it('loads the worker script from under the base path', async () => {
     vi.stubEnv('NEXT_PUBLIC_BASE_PATH', '/engineer/learning/ai/math');
     vi.resetModules();
@@ -99,8 +105,5 @@ describe('browserWorker', () => {
     const { browserWorker } = await import('./client');
     browserWorker();
     expect(urls).toEqual(['/engineer/learning/ai/math/pyodide-worker.js']);
-    vi.unstubAllGlobals();
-    vi.unstubAllEnvs();
-    vi.resetModules();
   });
 });

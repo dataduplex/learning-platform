@@ -64,6 +64,7 @@ export function describeStep(step) {
   return `${env}${step.argv.map(quote).join(' ')}${capture}`;
 }
 
+// Leaves `${name}` references unquoted so a dry run shows them as written; shellQuote would quote them.
 function quote(arg) {
   return /^[\w./:=@%+${}*-]+$/.test(arg) ? arg : `'${arg}'`;
 }
