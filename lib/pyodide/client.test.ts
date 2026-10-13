@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createPyodideClient } from './client';
 import type { WorkerLike } from './protocol';
 
@@ -87,5 +87,23 @@ describe('createPyodideClient', () => {
     });
     client.dispose();
     await expect(client.run('1')).rejects.toThrow(/disposed/);
+  });
+});
+
+describe('browserWorker', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it('loads the worker script from under the base path', async () => {
+    vi.stubEnv('NEXT_PUBLIC_BASE_PATH', '/engineer/learning/ai/math');
+    vi.resetModules();
+    const urls: string[] = [];
+    vi.stubGlobal('Worker', class { constructor(url: string) { urls.push(url); } });
+    const { browserWorker } = await import('./client');
+    browserWorker();
+    expect(urls).toEqual(['/engineer/learning/ai/math/pyodide-worker.js']);
   });
 });

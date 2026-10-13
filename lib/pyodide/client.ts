@@ -1,3 +1,4 @@
+import { withBasePath } from '../base-path';
 import { isRunReply, type WorkerLike } from './protocol';
 
 export interface RunResult {
@@ -19,7 +20,7 @@ export interface PyodideClient {
 
 /** The real worker. Constructed lazily so opening a lesson costs no download. */
 export function browserWorker(): WorkerLike {
-  return new Worker('/pyodide-worker.js');
+  return new Worker(withBasePath('/pyodide-worker.js'));
 }
 
 export function createPyodideClient({ worker }: { worker: WorkerLike }): PyodideClient {
