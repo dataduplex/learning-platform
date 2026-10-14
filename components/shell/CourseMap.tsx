@@ -11,15 +11,20 @@ export function CourseMap() {
   const { snapshot } = useProgress();
   const lessons = allLessons();
   const doneCount = lessons.filter((lesson) => snapshot.lessons[lesson.id]?.completed).length;
+  const plannedCount = lessons.filter((lesson) => !isAuthoredLessonId(lesson.id)).length;
 
   return (
     <div className="course-map">
       <header className="course-map-head">
         <ProgressRing done={doneCount} total={lessons.length} />
         <p className="course-map-note">
-          Lessons marked planned are not written yet. They are listed anyway, so the shape of
-          the whole course is visible from the start. <Link href="/notation">Notation
-          reference</Link>.
+          {plannedCount > 0 ? (
+            <>
+              Lessons marked planned are not written yet. They are listed anyway, so the shape of
+              the whole course is visible from the start.{' '}
+            </>
+          ) : null}
+          <Link href="/notation">Notation reference</Link>.
         </p>
       </header>
 

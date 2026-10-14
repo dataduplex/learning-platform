@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { useId } from 'react';
-import { formatFixed } from './NumberReadout';
+import { formatFixed, groupThousands } from './NumberReadout';
 
 export function Slider({
   label,
@@ -13,6 +13,7 @@ export function Slider({
   onChange,
   digits = 2,
   unit,
+  grouped = false,
 }: {
   label: ReactNode;
   value: number;
@@ -22,14 +23,17 @@ export function Slider({
   onChange: (value: number) => void;
   digits?: number;
   unit?: string;
+  /** Commas between groups of three digits in the whole part. */
+  grouped?: boolean;
 }) {
   const id = useId();
+  const written = formatFixed(value, digits);
   return (
     <div className="slider">
       <div className="slider-head">
         <label className="slider-label" htmlFor={id}>{label}</label>
         <span className="slider-value">
-          <span className="slider-number">{formatFixed(value, digits)}</span>
+          <span className="slider-number">{grouped ? groupThousands(written) : written}</span>
           {unit === undefined ? null : <span className="slider-unit">{unit}</span>}
         </span>
       </div>
