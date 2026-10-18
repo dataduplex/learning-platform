@@ -36,6 +36,7 @@ export function Heatmap({
   digits = 2,
   showValues = false,
   colorKey,
+  activeRow,
   onActiveCell,
 }: {
   matrix: Mat;
@@ -50,8 +51,13 @@ export function Heatmap({
   showValues?: boolean;
   /** Set under the cells, spanning their grid. */
   colorKey?: { caption: ReactNode; stops: readonly KeyStop[] };
+  /** Outline this row. */
+  activeRow?: number;
   onActiveCell?: (cell: ActiveCell | null) => void;
 }) {
+  if (activeRow !== undefined && (!Number.isInteger(activeRow) || activeRow < 0 || activeRow >= matrix.rows)) {
+    throw new RangeError(`row ${activeRow} is outside a heatmap of ${matrix.rows} rows`);
+  }
   const id = useId();
   const gutterLeft = rowLabels ? rowLabelGutter(rowLabels) : EDGE;
   const gutterTop = colLabels ? 22 : EDGE;
@@ -119,6 +125,21 @@ export function Heatmap({
               />
             );
           }),
+        )}
+
+        {activeRow === undefined ? null : (
+          <rect
+            data-role="active-row"
+            className="heatmap-active-row"
+            x={gutterLeft}
+            y={gutterTop + activeRow * cellSize}
+            width={matrix.cols * cellSize}
+            height={cellSize}
+            fill="none"
+            stroke="var(--ink-primary)"
+            strokeWidth={2}
+            pointerEvents="none"
+          />
         )}
 
         {showValues && Array.from({ length: matrix.rows }).flatMap((_, row) =>

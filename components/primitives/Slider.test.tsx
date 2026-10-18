@@ -37,4 +37,11 @@ describe('Slider', () => {
     );
     expect(screen.getByText('deg')).toBeInTheDocument();
   });
+
+  it('groups thousands in the readout only when asked', () => {
+    const { rerender } = render(<Slider label="context" value={2048} min={8} max={2048} step={4} digits={0} onChange={() => {}} />);
+    expect(screen.getByText('2048')).toBeInTheDocument();
+    rerender(<Slider label="context" value={2048} min={8} max={2048} step={4} digits={0} grouped onChange={() => {}} />);
+    expect(screen.getByText('2,048')).toBeInTheDocument();
+  });
 });

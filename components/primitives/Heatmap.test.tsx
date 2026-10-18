@@ -14,6 +14,17 @@ describe('Heatmap', () => {
     expect(document.querySelectorAll('[data-role="cell"]')).toHaveLength(4);
   });
 
+  it('outlines the active row around its cells, and only when asked', () => {
+    const { rerender } = render(<Heatmap matrix={matrix} colorFor={colorFor} caption="c" />);
+    expect(document.querySelector('[data-role="active-row"]')).toBeNull();
+    rerender(<Heatmap matrix={matrix} colorFor={colorFor} caption="c" activeRow={1} />);
+    const outline = document.querySelector('[data-role="active-row"]');
+    expect(['x', 'y', 'width', 'height', 'fill', 'stroke', 'stroke-width'].map((name) => outline?.getAttribute(name)))
+      .toEqual(['8', '42', '68', '34', 'none', 'var(--ink-primary)', '2']);
+    expect(() => render(<Heatmap matrix={matrix} colorFor={colorFor} caption="c" activeRow={2} />))
+      .toThrow('row 2 is outside a heatmap of 2 rows');
+  });
+
   it('colors each cell through the scale it was given', () => {
     render(<Heatmap matrix={matrix} colorFor={colorFor} caption="c" />);
     const cells = [...document.querySelectorAll('[data-role="cell"]')];
