@@ -1,4 +1,4 @@
-import type { LessonId } from '@/content/curriculum';
+import type { LessonId } from '../course/types';
 import { emptySnapshot, migrate } from './migrations';
 import type { AttemptRecord, LessonProgress, ProgressSnapshot, ProgressStore } from './types';
 

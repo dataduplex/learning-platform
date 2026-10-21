@@ -4,7 +4,7 @@ import {
   createContext, useCallback, useContext, useMemo, useSyncExternalStore,
   type ReactNode,
 } from 'react';
-import type { LessonId } from '@/content/curriculum';
+import type { LessonId } from '../course/types';
 import { createLocalStorageStore } from './local-storage-store';
 import { emptySnapshot } from './migrations';
 import type { LessonProgress, ProgressSnapshot, ProgressStore } from './types';

@@ -1,4 +1,4 @@
-import type { LessonId } from '@/content/curriculum';
+import type { LessonId } from '../course/types';
 
 export const PROGRESS_SCHEMA_VERSION = 1;
 

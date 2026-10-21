@@ -1,7 +1,7 @@
 'use client';
 
 import { useId, useState } from 'react';
-import type { LessonId } from '@/content/curriculum';
+import type { LessonId } from '../../lib/course/types';
 import {
   check, isAnswered,
   type AnswerFor, type CheckResult, type ExerciseSpec,
