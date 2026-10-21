@@ -1,7 +1,10 @@
 import { render, type RenderOptions, type RenderResult } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { expect } from 'vitest';
-import { ProgressProvider, createLocalStorageStore, type ProgressStore } from '@/lib/progress';
+import { CourseProvider } from '../lib/course/context';
+import type { Course } from '../lib/course/types';
+import { ProgressProvider, createLocalStorageStore, type ProgressStore } from '../lib/progress';
+import { TEST_COURSE } from './fixtures';
 
 /** In-memory Storage so component tests never touch a global. */
 export function memoryStorage(seed: Record<string, string> = {}): Storage {
@@ -21,22 +24,36 @@ export interface ProgressRenderResult extends RenderResult {
 }
 
 /**
- * Renders inside a ProgressProvider backed by memory and a fixed clock, and
- * hands the store back so a test can assert on what was recorded.
+ * Renders inside a course and a ProgressProvider backed by memory and a fixed clock,
+ * and hands the store back so a test can assert on what was recorded.
  */
 export function renderWithProgress(
   ui: ReactElement,
-  options: Omit<RenderOptions, 'wrapper'> & { store?: ProgressStore } = {},
+  options: Omit<RenderOptions, 'wrapper'> & { store?: ProgressStore; course?: Course } = {},
 ): ProgressRenderResult {
-  const { store: provided, ...rest } = options;
+  const { store: provided, course = TEST_COURSE, ...rest } = options;
   const store = provided ?? createLocalStorageStore({
     storage: memoryStorage(),
     now: () => 1_700_000_000_000,
   });
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <ProgressProvider store={store}>{children}</ProgressProvider>
+    <CourseProvider course={course}>
+      <ProgressProvider store={store}>{children}</ProgressProvider>
+    </CourseProvider>
   );
   return { ...render(ui, { wrapper, ...rest }), store };
+}
+
+/** Renders inside a course alone, for components that read the course but not progress. */
+export function renderWithCourse(
+  ui: ReactElement,
+  options: Omit<RenderOptions, 'wrapper'> & { course?: Course } = {},
+): RenderResult {
+  const { course = TEST_COURSE, ...rest } = options;
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <CourseProvider course={course}>{children}</CourseProvider>
+  );
+  return render(ui, { wrapper, ...rest });
 }
 
 /** Every point in an SVG path's `d`, in order. */
