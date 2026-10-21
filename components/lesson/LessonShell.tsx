@@ -2,19 +2,16 @@
 
 import dynamic from 'next/dynamic';
 import { useEffect } from 'react';
-import type { Lesson } from '@/content/curriculum';
-import { partOfLesson } from '@/content/curriculum';
-import { useProgress } from '@/lib/progress';
+import { useCourse } from '../../lib/course/context';
+import { partOfLesson } from '../../lib/course/curriculum.mjs';
+import type { Lesson } from '../../lib/course/types';
+import { useProgress } from '../../lib/progress';
 import { CompleteButton } from './CompleteButton';
 import { PrevNext } from './PrevNext';
 
-/**
- * Client-only: the panel reads localStorage to decide whether a key is present, so
- * it must not be prerendered. This defers the panel itself, not the API SDK - the
- * transport handles that, because a dynamic component still loads on mount.
- */
+/** Client-only: the panel reads localStorage, so it must not be prerendered. */
 const TutorPanel = dynamic(
-  () => import('@/components/tutor/TutorPanel').then((module) => module.TutorPanel),
+  () => import('../tutor/TutorPanel').then((module) => module.TutorPanel),
   { ssr: false },
 );
 
@@ -25,12 +22,12 @@ export function LessonShell({
   lesson: Lesson;
   children: React.ReactNode;
 }) {
+  const { curriculum } = useCourse();
   const { store } = useProgress();
 
-  // Visiting is progress too: the course map should show where you have been.
   useEffect(() => { store?.markVisited(lesson.id); }, [store, lesson.id]);
 
-  const part = partOfLesson(lesson.id);
+  const part = partOfLesson(curriculum, lesson.id);
 
   return (
     <article className="page page-narrow lesson">

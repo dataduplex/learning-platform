@@ -1,17 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  CURRICULUM, allLessons, isAuthoredLessonId, lessonPath, lessonsInPart,
-} from '@/content/curriculum';
-import { useProgress } from '@/lib/progress';
+import { useCourse } from '../../lib/course/context';
+import { allLessons, lessonPath, lessonsInPart } from '../../lib/course/curriculum.mjs';
+import { useProgress } from '../../lib/progress';
 import { ProgressRing } from './ProgressRing';
 
 export function CourseMap() {
+  const { identity, curriculum, authoredLessonIds } = useCourse();
   const { snapshot } = useProgress();
-  const lessons = allLessons();
+  const lessons = allLessons(curriculum);
+  const isAuthored = (id: string) => authoredLessonIds.includes(id);
   const doneCount = lessons.filter((lesson) => snapshot.lessons[lesson.id]?.completed).length;
-  const plannedCount = lessons.filter((lesson) => !isAuthoredLessonId(lesson.id)).length;
+  const plannedCount = lessons.filter((lesson) => !isAuthored(lesson.id)).length;
 
   return (
     <div className="course-map">
@@ -24,21 +25,19 @@ export function CourseMap() {
               the whole course is visible from the start.{' '}
             </>
           ) : null}
-          <Link href="/notation">Notation reference</Link>.
+          <Link href={identity.reference.path}>{identity.reference.label} reference</Link>.
         </p>
       </header>
 
-      {CURRICULUM.map((part) => (
+      {curriculum.map((part) => (
         <section className="course-part" key={part.id}>
           <h3>{part.title}</h3>
           <p className="course-part-blurb">{part.blurb}</p>
           <ol className="course-lessons">
-            {lessonsInPart(part.id).map((lesson) => {
+            {lessonsInPart(curriculum, part.id).map((lesson) => {
               const state = snapshot.lessons[lesson.id];
               const complete = state?.completed === true;
-              // Authorship is per lesson, not per part: AUTHORED_LESSON_IDS is the
-              // list with MDX files this cycle.
-              const authored = isAuthoredLessonId(lesson.id);
+              const authored = isAuthored(lesson.id);
               return (
                 <li className="course-lesson" key={lesson.id} data-authored={authored}>
                   <Link href={lessonPath(lesson.id)}>

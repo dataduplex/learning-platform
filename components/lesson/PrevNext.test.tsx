@@ -1,18 +1,17 @@
 import { screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { allLessons } from '@/content/curriculum';
-import { renderWithProgress } from '@/test/render';
+import { allLessons } from '../../lib/course/curriculum.mjs';
+import { TEST_PARTS } from '../../test/fixtures';
+import { renderWithProgress } from '../../test/render';
 import { PrevNext } from './PrevNext';
 
-// CURRICULUM is parts; neighbours() walks lessons, so these index allLessons().
-const LESSONS = allLessons();
+const LESSONS = allLessons(TEST_PARTS);
 
 describe('PrevNext', () => {
   it('links both neighbours in the middle of the course', () => {
-    const middle = LESSONS[2]!;
-    renderWithProgress(<PrevNext lessonId={middle.id} />);
-    expect(screen.getByRole('link', { name: new RegExp(LESSONS[1]!.title, 'i') })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: new RegExp(LESSONS[3]!.title, 'i') })).toBeInTheDocument();
+    renderWithProgress(<PrevNext lessonId="beta" />);
+    expect(screen.getByRole('link', { name: /alpha/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /gamma/i })).toBeInTheDocument();
   });
 
   it('omits the previous link on the first lesson', () => {
@@ -28,7 +27,7 @@ describe('PrevNext', () => {
   });
 
   it('labels itself as lesson navigation', () => {
-    renderWithProgress(<PrevNext lessonId={LESSONS[1]!.id} />);
+    renderWithProgress(<PrevNext lessonId="beta" />);
     expect(screen.getByRole('navigation', { name: /lesson/i })).toBeInTheDocument();
   });
 });

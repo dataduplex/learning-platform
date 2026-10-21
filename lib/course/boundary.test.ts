@@ -37,21 +37,11 @@ const COURSE_IDENTITY = /llm-math-course|mathematics of language models|mathemat
 
 /** Files still importing from the course. Each task of cycle 1a shortens this list; it ends empty. */
 const IMPORT_DEBTS = new Set([
-  'components/lesson/LessonShell.tsx',
-  'components/lesson/NotationTable.tsx',
-  'components/lesson/PrevNext.test.tsx',
-  'components/lesson/PrevNext.tsx',
-  'components/lesson/Sym.test.tsx',
-  'components/lesson/Sym.tsx',
-  'components/shell/CourseMap.test.tsx',
-  'components/shell/CourseMap.tsx',
   'scripts/build-lesson-context.mjs',
 ]);
 
 /** Files still naming the course. Same rule: it only shrinks. */
-const IDENTITY_DEBTS = new Set([
-  'components/shell/SiteHeader.tsx',
-]);
+const IDENTITY_DEBTS = new Set<string>([]);
 
 function sources(path: string): string[] {
   if (statSync(path).isFile()) return [path];

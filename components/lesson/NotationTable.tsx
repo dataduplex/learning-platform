@@ -1,13 +1,17 @@
-import { NOTATION, type NotationEntry } from '@/content/notation';
-import { Katex } from '@/components/primitives/Katex';
-import { lessonById, lessonPath } from '@/content/curriculum';
+import Link from 'next/link';
+import { lessonPath } from '../../lib/course/curriculum.mjs';
+import type { NotationEntry } from '../../lib/course/types';
+import { Katex } from '../primitives/Katex';
 
 export function NotationTable({
-  entries = NOTATION,
+  entries,
+  lessonTitle,
   showIntroducedIn = true,
 }: {
-  entries?: readonly NotationEntry[];
-  /** Off when the caller already groups by lesson, so the column is not repeated. */
+  entries: readonly NotationEntry[];
+  /** The title of the lesson that introduces an entry; undefined when the course does not know it. */
+  lessonTitle: (id: string) => string | undefined;
+  /** Whether the table shows the lesson that introduces each entry. */
   showIntroducedIn?: boolean;
 }) {
   return (
@@ -23,7 +27,7 @@ export function NotationTable({
       </thead>
       <tbody>
         {entries.map((entry) => {
-          const lesson = lessonById(entry.introducedIn);
+          const title = lessonTitle(entry.introducedIn);
           return (
             <tr id={entry.id} key={entry.id}>
               <th scope="row" className="notation-symbol">
@@ -38,8 +42,8 @@ export function NotationTable({
               </td>
               {showIntroducedIn ? (
                 <td>
-                  {lesson === undefined ? entry.introducedIn : (
-                    <a href={lessonPath(lesson.id)}>{lesson.title}</a>
+                  {title === undefined ? entry.introducedIn : (
+                    <Link href={lessonPath(entry.introducedIn)}>{title}</Link>
                   )}
                 </td>
               ) : null}

@@ -1,22 +1,21 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { notationById } from '@/content/notation';
-import { Sym } from './Sym';
+import { TEST_NOTATION, testNotationById } from '../../test/fixtures';
+import { createSym } from './Sym';
 
-// NotationEntry is {id, symbol, name, meaning, shape?, introducedIn}: the spoken
-// form is `name` and the gloss is `meaning`.
-const DOT = notationById('dot-product')!;
+const Sym = createSym({ lookup: testNotationById, referencePath: '/glossary' });
+const DOT = TEST_NOTATION[1]!;
 
 describe('Sym', () => {
-  it('typesets the symbol and links to its entry', () => {
-    render(<Sym id="dot-product" />);
+  it('typesets the symbol and links to its entry on the reference page', () => {
+    render(<Sym id="dot" />);
     const link = screen.getByRole('link');
-    expect(link).toHaveAttribute('href', '/notation#dot-product');
+    expect(link).toHaveAttribute('href', '/glossary#dot');
     expect(document.querySelector('.katex')).toBeInTheDocument();
   });
 
   it('carries the spoken name so a screen reader does not read the markup', () => {
-    render(<Sym id="dot-product" />);
+    render(<Sym id="dot" />);
     expect(screen.getByText(DOT.name)).toHaveClass('sr-only');
   });
 
@@ -25,7 +24,7 @@ describe('Sym', () => {
   });
 
   it('renders the gloss as a title for a pointer reader', () => {
-    render(<Sym id="dot-product" />);
+    render(<Sym id="dot" />);
     expect(screen.getByRole('link')).toHaveAttribute('title', DOT.meaning);
   });
 });

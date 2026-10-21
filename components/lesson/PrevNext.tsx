@@ -1,10 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { lessonPath, neighbours } from '@/content/curriculum';
+import { useCourse } from '../../lib/course/context';
+import { lessonPath, neighbours } from '../../lib/course/curriculum.mjs';
 
 export function PrevNext({ lessonId }: { lessonId: string }) {
-  const { previous, next } = neighbours(lessonId);
+  const { curriculum } = useCourse();
+  const { previous, next } = neighbours(curriculum, lessonId);
   return (
     <nav className="prev-next" aria-label="Lesson">
       {previous ? (
