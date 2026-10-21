@@ -1,5 +1,6 @@
 'use client';
 
+import type { BrowserTutorOptions } from './browser-key-transport';
 import { readKey } from './key-store';
 import type { TutorChunk, TutorRequest, TutorTransport } from './types';
 
@@ -9,13 +10,13 @@ import type { TutorChunk, TutorRequest, TutorTransport } from './types';
  * cost belongs on the learner who uses the tutor. Readiness needs only the key
  * store, which is small enough to ship with the page.
  */
-export function createLazyBrowserTransport(storage: Storage): TutorTransport {
+export function createLazyBrowserTransport(storage: Storage, options: BrowserTutorOptions): TutorTransport {
   return {
-    isReady: () => readKey(storage) !== null,
+    isReady: () => readKey(storage, options.key) !== null,
 
     async *ask(request: TutorRequest, signal?: AbortSignal): AsyncIterable<TutorChunk> {
       const { createBrowserKeyTransport } = await import('./browser-key-transport');
-      yield* createBrowserKeyTransport({ storage }).ask(request, signal);
+      yield* createBrowserKeyTransport({ storage, ...options }).ask(request, signal);
     },
   };
 }

@@ -22,7 +22,14 @@ interface StreamingClient {
   messages: { stream(body: Record<string, unknown>): AsyncIterable<unknown> };
 }
 
-export interface BrowserKeyTransportOptions {
+export interface BrowserTutorOptions {
+  /** The localStorage key holding the learner's API key. */
+  readonly key: string;
+  /** The system prompt sent with every request. */
+  readonly systemPrompt: string;
+}
+
+export interface BrowserKeyTransportOptions extends BrowserTutorOptions {
   readonly storage: Storage;
   readonly createClient?: (apiKey: string) => StreamingClient;
 }
@@ -89,16 +96,16 @@ export function createBrowserKeyTransport(
   const createClient = options.createClient ?? defaultClient;
 
   return {
-    isReady: () => readKey(options.storage) !== null,
+    isReady: () => readKey(options.storage, options.key) !== null,
 
     async *ask(request: TutorRequest, signal?: AbortSignal): AsyncIterable<TutorChunk> {
-      const apiKey = readKey(options.storage);
+      const apiKey = readKey(options.storage, options.key);
       if (apiKey === null) {
         throw new TutorError('no-key', 'Add your Anthropic API key to use the tutor.');
       }
       signal?.throwIfAborted();
 
-      const { system, messages } = buildRequestBlocks(request);
+      const { system, messages } = buildRequestBlocks(request, options.systemPrompt);
 
       let stream: AsyncIterable<unknown>;
       try {

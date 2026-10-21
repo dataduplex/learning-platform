@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { renderWithCourse } from '../../test/render';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { CodeCell, fencedCode } from './CodeCell';
@@ -30,20 +31,20 @@ function fence(code: string) {
 
 describe('CodeCell', () => {
   it('shows the code before anything runs', () => {
-    render(<CodeCell client={stubClient({ stdout: '', value: null, error: null })}>{fence(CODE)}</CodeCell>);
+    renderWithCourse(<CodeCell client={stubClient({ stdout: '', value: null, error: null })}>{fence(CODE)}</CodeCell>);
     expect(screen.getByText(/import numpy as np/)).toBeInTheDocument();
   });
 
   it('runs on demand and shows stdout', async () => {
     const user = userEvent.setup();
-    render(<CodeCell client={stubClient({ stdout: '11\n', value: null, error: null })}>{fence(CODE)}</CodeCell>);
+    renderWithCourse(<CodeCell client={stubClient({ stdout: '11\n', value: null, error: null })}>{fence(CODE)}</CodeCell>);
     await user.click(screen.getByRole('button', { name: /run/i }));
     expect(await screen.findByText('11')).toBeInTheDocument();
   });
 
   it('shows a traceback as an error, with words not only color', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithCourse(
       <CodeCell client={stubClient({ stdout: '', value: null, error: 'NameError: x' })}>{fence(CODE)}</CodeCell>,
     );
     await user.click(screen.getByRole('button', { name: /run/i }));
@@ -61,7 +62,7 @@ describe('CodeCell', () => {
       subscribe: () => () => {},
       dispose: vi.fn(),
     };
-    render(<CodeCell client={client}>{fence(CODE)}</CodeCell>);
+    renderWithCourse(<CodeCell client={client}>{fence(CODE)}</CodeCell>);
     await user.click(screen.getByRole('button', { name: /run/i }));
     expect(screen.getByRole('status')).toHaveTextContent(/loading python/i);
     resolve?.({ stdout: 'done\n', value: null, error: null });
@@ -71,7 +72,7 @@ describe('CodeCell', () => {
   it('lets a learner edit the code and run what they wrote', async () => {
     const user = userEvent.setup();
     const client = stubClient({ stdout: '', value: null, error: null });
-    render(<CodeCell client={client} editable>{fence('1 + 1')}</CodeCell>);
+    renderWithCourse(<CodeCell client={client} editable>{fence('1 + 1')}</CodeCell>);
     const editor = screen.getByRole('textbox', { name: /python/i });
     await user.clear(editor);
     await user.type(editor, '2 + 2');
@@ -81,7 +82,7 @@ describe('CodeCell', () => {
 
   it('restores the original code on reset', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithCourse(
       <CodeCell client={stubClient({ stdout: '', value: null, error: null })} editable>{fence('1 + 1')}</CodeCell>,
     );
     const editor = screen.getByRole('textbox', { name: /python/i });
@@ -93,28 +94,28 @@ describe('CodeCell', () => {
 
   it('keeps the fenced code verbatim, indentation included', () => {
     const client = stubClient({ stdout: '', value: null, error: null });
-    const { unmount } = render(<CodeCell client={client} editable>{fence(NESTED)}</CodeCell>);
+    const { unmount } = renderWithCourse(<CodeCell client={client} editable>{fence(NESTED)}</CodeCell>);
     expect(screen.getByRole('textbox', { name: /python/i })).toHaveValue(NESTED);
     unmount();
-    const { container } = render(<CodeCell client={client}>{fence(NESTED)}</CodeCell>);
+    const { container } = renderWithCourse(<CodeCell client={client}>{fence(NESTED)}</CodeCell>);
     expect(container.querySelector('.code-cell-source code')?.textContent).toBe(NESTED);
   });
 
   it('gives the editor one row per line, and never fewer than three', async () => {
     const user = userEvent.setup();
     const client = stubClient({ stdout: '', value: null, error: null });
-    const { unmount } = render(<CodeCell client={client} editable>{fence(NESTED)}</CodeCell>);
+    const { unmount } = renderWithCourse(<CodeCell client={client} editable>{fence(NESTED)}</CodeCell>);
     const editor = screen.getByRole('textbox', { name: /python/i });
     expect(editor).toHaveAttribute('rows', '5');
     await user.type(editor, '{Enter}{Enter}print(sign(-2))');
     expect(editor).toHaveAttribute('rows', '7');
     unmount();
-    render(<CodeCell client={client} editable>{fence('1 + 1')}</CodeCell>);
+    renderWithCourse(<CodeCell client={client} editable>{fence('1 + 1')}</CodeCell>);
     expect(screen.getByRole('textbox', { name: /python/i })).toHaveAttribute('rows', '3');
   });
 
   it('turns soft wrapping off, so a long line scrolls instead of restarting at column 0', () => {
-    render(<CodeCell client={stubClient({ stdout: '', value: null, error: null })} editable>{fence(CODE)}</CodeCell>);
+    renderWithCourse(<CodeCell client={stubClient({ stdout: '', value: null, error: null })} editable>{fence(CODE)}</CodeCell>);
     expect(screen.getByRole('textbox', { name: /python/i })).toHaveAttribute('wrap', 'off');
   });
 
@@ -136,7 +137,7 @@ describe('CodeCell', () => {
       subscribe: () => () => {},
       dispose: vi.fn(),
     };
-    render(<CodeCell client={client}>{fence('1')}</CodeCell>);
+    renderWithCourse(<CodeCell client={client}>{fence('1')}</CodeCell>);
     await user.click(screen.getByRole('button', { name: /run/i }));
     expect(screen.getByRole('button', { name: /run/i })).toBeDisabled();
   });

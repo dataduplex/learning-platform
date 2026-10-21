@@ -1,22 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { THEME_STORAGE_KEY, applyTheme, readStoredTheme, resolveMode } from './theme';
-import { memoryStorage } from '@/test/render';
+import { memoryStorage } from '../test/render';
+import { applyTheme, readStoredTheme, resolveMode, themeBootstrapScript } from './theme';
+
+const KEY = 'test-course:theme';
 
 describe('readStoredTheme', () => {
   it('returns system when nothing is stored', () => {
-    expect(readStoredTheme(memoryStorage())).toBe('system');
+    expect(readStoredTheme(memoryStorage(), KEY)).toBe('system');
   });
 
   it('reads a stored choice', () => {
     const storage = memoryStorage();
-    storage.setItem(THEME_STORAGE_KEY, 'dark');
-    expect(readStoredTheme(storage)).toBe('dark');
+    storage.setItem(KEY, 'dark');
+    expect(readStoredTheme(storage, KEY)).toBe('dark');
   });
 
   it('falls back to system for a value it does not recognise', () => {
     const storage = memoryStorage();
-    storage.setItem(THEME_STORAGE_KEY, 'sepia');
-    expect(readStoredTheme(storage)).toBe('system');
+    storage.setItem(KEY, 'sepia');
+    expect(readStoredTheme(storage, KEY)).toBe('system');
   });
 
   it('survives a storage that throws, as in private browsing', () => {
@@ -25,7 +27,7 @@ describe('readStoredTheme', () => {
       clear() {}, key: () => null, removeItem() {}, setItem() {},
       getItem() { throw new Error('denied'); },
     };
-    expect(readStoredTheme(hostile)).toBe('system');
+    expect(readStoredTheme(hostile, KEY)).toBe('system');
   });
 });
 
@@ -33,18 +35,26 @@ describe('applyTheme', () => {
   it('stamps the attribute and persists the choice', () => {
     const root = document.createElement('html');
     const storage = memoryStorage();
-    applyTheme('dark', root, storage);
+    applyTheme('dark', root, storage, KEY);
     expect(root.dataset.theme).toBe('dark');
-    expect(storage.getItem(THEME_STORAGE_KEY)).toBe('dark');
+    expect(storage.getItem(KEY)).toBe('dark');
   });
 
   it('removes the attribute for system, so the media query takes over', () => {
     const root = document.createElement('html');
     const storage = memoryStorage();
-    applyTheme('light', root, storage);
-    applyTheme('system', root, storage);
+    applyTheme('light', root, storage, KEY);
+    applyTheme('system', root, storage, KEY);
     expect(root.dataset.theme).toBeUndefined();
-    expect(storage.getItem(THEME_STORAGE_KEY)).toBe('system');
+    expect(storage.getItem(KEY)).toBe('system');
+  });
+});
+
+describe('themeBootstrapScript', () => {
+  it('reads the course key and stamps only an explicit choice', () => {
+    const script = themeBootstrapScript(KEY);
+    expect(script).toContain(`localStorage.getItem('${KEY}')`);
+    expect(script).toContain("t==='dark'||t==='light'");
   });
 });
 

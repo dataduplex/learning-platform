@@ -1,8 +1,10 @@
 'use client';
 
 import { useId } from 'react';
-import { applyTheme, type ThemeChoice } from '@/lib/theme';
-import { useThemeChoice } from '@/lib/theme-client';
+import { useCourse } from '../../lib/course/context';
+import { themeStorageKey } from '../../lib/course/keys';
+import { applyTheme, type ThemeChoice } from '../../lib/theme';
+import { useThemeChoice } from '../../lib/theme-client';
 
 const OPTIONS: readonly { value: ThemeChoice; label: string }[] = [
   { value: 'light', label: 'Light' },
@@ -13,9 +15,10 @@ const OPTIONS: readonly { value: ThemeChoice; label: string }[] = [
 export function ThemeToggle() {
   const id = useId();
   const choice = useThemeChoice();
+  const key = themeStorageKey(useCourse().identity.storageKeyPrefix);
 
   function pick(next: ThemeChoice): void {
-    applyTheme(next, document.documentElement, window.localStorage);
+    applyTheme(next, document.documentElement, window.localStorage, key);
   }
 
   return (

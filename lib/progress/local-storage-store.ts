@@ -2,14 +2,14 @@ import type { LessonId } from '../course/types';
 import { emptySnapshot, migrate } from './migrations';
 import type { AttemptRecord, LessonProgress, ProgressSnapshot, ProgressStore } from './types';
 
-export const PROGRESS_STORAGE_KEY = 'llm-math-course:progress:v1';
-
 /** Bounded so one lesson cannot fill the origin's storage quota. */
 const MAX_ATTEMPTS_PER_LESSON = 50;
 
 export interface LocalStorageStoreOptions {
   storage: Storage;
   now: () => number;
+  /** The storage key the snapshot lives under. */
+  key: string;
 }
 
 function blankLesson(): LessonProgress {
@@ -17,13 +17,13 @@ function blankLesson(): LessonProgress {
 }
 
 export function createLocalStorageStore(options: LocalStorageStoreOptions): ProgressStore {
-  const { storage, now } = options;
+  const { storage, now, key } = options;
   const listeners = new Set<() => void>();
   let snapshot = read();
 
   function read(): ProgressSnapshot {
     try {
-      const persisted = storage.getItem(PROGRESS_STORAGE_KEY);
+      const persisted = storage.getItem(key);
       return persisted === null ? emptySnapshot() : migrate(JSON.parse(persisted));
     } catch {
       // Corrupt payload or storage that refuses reads. Start clean.
@@ -38,7 +38,7 @@ export function createLocalStorageStore(options: LocalStorageStoreOptions): Prog
   function commit(next: ProgressSnapshot): void {
     snapshot = next;
     try {
-      storage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(next));
+      storage.setItem(key, JSON.stringify(next));
     } catch {
       // Private browsing or a full quota. Nothing useful to do here.
     }
@@ -80,7 +80,7 @@ export function createLocalStorageStore(options: LocalStorageStoreOptions): Prog
 
     reset: () => {
       try {
-        storage.removeItem(PROGRESS_STORAGE_KEY);
+        storage.removeItem(key);
       } catch {
         // Ignored for the same reason as a failed write.
       }

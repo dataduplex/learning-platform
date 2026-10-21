@@ -1,12 +1,13 @@
 'use client';
 
 import { isValidElement, useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useCourse } from '../../lib/course/context';
 import {
   browserWorker,
   createPyodideClient,
   type PyodideClient,
   type RunResult,
-} from '@/lib/pyodide/client';
+} from '../../lib/pyodide/client';
 
 type Phase = 'idle' | 'loading' | 'running' | 'done';
 
@@ -45,6 +46,7 @@ export function CodeCell({
   client?: PyodideClient;
 }) {
   const id = useId();
+  const { identity } = useCourse();
   const code = fencedCode(children);
   const [source, setSource] = useState(code);
   const [phase, setPhase] = useState<Phase>('idle');
@@ -57,7 +59,7 @@ export function CodeCell({
   }, [injected]);
 
   async function run(): Promise<void> {
-    clientRef.current ??= createPyodideClient({ worker: browserWorker() });
+    clientRef.current ??= createPyodideClient({ worker: browserWorker(identity.basePath) });
     const client = clientRef.current;
     setPhase(client.status() === 'idle' ? 'running' : 'loading');
     try {

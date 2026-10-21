@@ -1,10 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { clearKey } from '@/lib/tutor/key-store';
-import { createLazyBrowserTransport } from '@/lib/tutor/lazy-transport';
-import { useTutor } from '@/lib/tutor/use-tutor';
-import type { TutorTransport } from '@/lib/tutor/types';
+import { useCourse } from '../../lib/course/context';
+import { tutorKeyStorageKey } from '../../lib/course/keys';
+import { clearKey } from '../../lib/tutor/key-store';
+import { createLazyBrowserTransport } from '../../lib/tutor/lazy-transport';
+import { systemPrompt } from '../../lib/tutor/prompt';
+import { useTutor } from '../../lib/tutor/use-tutor';
+import type { TutorTransport } from '../../lib/tutor/types';
 import { KeyGate } from './KeyGate';
 import { MessageList } from './MessageList';
 
@@ -19,6 +22,8 @@ export function TutorPanel({
   transport?: TutorTransport;
   exercisePrompt?: string;
 }) {
+  const { identity } = useCourse();
+  const storageKey = tutorKeyStorageKey(identity.storageKeyPrefix);
   const [open, setOpen] = useState(false);
   const [ready, setReady] = useState(false);
   const [draft, setDraft] = useState('');
@@ -26,12 +31,16 @@ export function TutorPanel({
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   const resolved = useMemo(
-    () => transport ?? createLazyBrowserTransport(window.localStorage),
-    [transport],
+    () => transport ?? createLazyBrowserTransport(window.localStorage, {
+      key: storageKey,
+      systemPrompt: systemPrompt(identity.tutor),
+    }),
+    [transport, storageKey, identity.tutor],
   );
   const { messages, streaming, error, busy, usage, ask, retry } = useTutor({
     lessonId,
     transport: resolved,
+    basePath: identity.basePath,
   });
 
   useEffect(() => { if (open && ready) inputRef.current?.focus(); }, [open, ready]);
@@ -104,7 +113,7 @@ export function TutorPanel({
                   {error.kind === 'bad-key' ? (
                     <button
                       type="button"
-                      onClick={() => { clearKey(window.localStorage); setReady(false); }}
+                      onClick={() => { clearKey(window.localStorage, storageKey); setReady(false); }}
                     >
                       Replace the key
                     </button>
@@ -135,7 +144,7 @@ export function TutorPanel({
               </form>
             </>
           ) : (
-            <KeyGate storage={window.localStorage} onSaved={() => setReady(true)} />
+            <KeyGate storage={window.localStorage} storageKey={storageKey} onSaved={() => setReady(true)} />
           )}
         </section>
       )}

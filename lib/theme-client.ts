@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import type { Mode } from '@/lib/palette';
+import { useCourse } from './course/context';
+import { themeStorageKey } from './course/keys';
+import type { Mode } from './palette';
 import { readStoredTheme, resolveMode, subscribeToTheme, type ThemeChoice } from './theme';
 
 /**
@@ -10,9 +12,10 @@ import { readStoredTheme, resolveMode, subscribeToTheme, type ThemeChoice } from
  * by then, so nothing flashes while this corrects itself.
  */
 export function useThemeChoice(): ThemeChoice {
+  const key = themeStorageKey(useCourse().identity.storageKeyPrefix);
   return useSyncExternalStore(
     subscribeToTheme,
-    () => readStoredTheme(window.localStorage),
+    () => readStoredTheme(window.localStorage, key),
     () => 'system',
   );
 }

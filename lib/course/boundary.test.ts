@@ -51,14 +51,6 @@ const IMPORT_DEBTS = new Set([
 /** Files still naming the course. Same rule: it only shrinks. */
 const IDENTITY_DEBTS = new Set([
   'components/shell/SiteHeader.tsx',
-  'components/tutor/KeyGate.test.tsx',
-  'lib/base-path.test.ts',
-  'lib/progress/local-storage-store.ts',
-  'lib/pyodide/client.test.ts',
-  'lib/theme.ts',
-  'lib/tutor/context.test.ts',
-  'lib/tutor/key-store.ts',
-  'lib/tutor/prompt.ts',
 ]);
 
 function sources(path: string): string[] {

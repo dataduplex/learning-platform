@@ -1,13 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { writeKey } from '@/lib/tutor/key-store';
+import { writeKey } from '../../lib/tutor/key-store';
 
 export function KeyGate({
   storage,
+  storageKey,
   onSaved,
 }: {
   storage: Storage;
+  /** The storage key the API key is kept under. */
+  storageKey: string;
   onSaved: () => void;
 }) {
   const [draft, setDraft] = useState('');
@@ -15,7 +18,7 @@ export function KeyGate({
 
   function save() {
     try {
-      writeKey(draft, storage);
+      writeKey(draft, storage, storageKey);
       setDraft('');
       setError(null);
       onSaved();

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { clearKey, looksLikeKey, readKey, writeKey } from './key-store';
 
+const STORAGE_KEY = 'test-course:tutor-key';
+
 function memoryStorage(): Storage {
   const map = new Map<string, string>();
   return {
@@ -32,31 +34,31 @@ describe('looksLikeKey', () => {
 describe('the key store', () => {
   it('round-trips a key', () => {
     const storage = memoryStorage();
-    writeKey(`sk-ant-${'x'.repeat(60)}`, storage);
-    expect(readKey(storage)).toBe(`sk-ant-${'x'.repeat(60)}`);
+    writeKey(`sk-ant-${'x'.repeat(60)}`, storage, STORAGE_KEY);
+    expect(readKey(storage, STORAGE_KEY)).toBe(`sk-ant-${'x'.repeat(60)}`);
   });
 
   it('trims surrounding whitespace, which pasting reliably introduces', () => {
     const storage = memoryStorage();
-    writeKey(`  sk-ant-${'x'.repeat(60)}\n`, storage);
-    expect(readKey(storage)).toBe(`sk-ant-${'x'.repeat(60)}`);
+    writeKey(`  sk-ant-${'x'.repeat(60)}\n`, storage, STORAGE_KEY);
+    expect(readKey(storage, STORAGE_KEY)).toBe(`sk-ant-${'x'.repeat(60)}`);
   });
 
   it('refuses to store something that is not key-shaped', () => {
     const storage = memoryStorage();
-    expect(() => writeKey('hunter2', storage)).toThrow(/does not look like/i);
-    expect(readKey(storage)).toBeNull();
+    expect(() => writeKey('hunter2', storage, STORAGE_KEY)).toThrow(/does not look like/i);
+    expect(readKey(storage, STORAGE_KEY)).toBeNull();
   });
 
   it('reports no key when none was ever written', () => {
-    expect(readKey(memoryStorage())).toBeNull();
+    expect(readKey(memoryStorage(), STORAGE_KEY)).toBeNull();
   });
 
   it('clears the key', () => {
     const storage = memoryStorage();
-    writeKey(`sk-ant-${'x'.repeat(60)}`, storage);
-    clearKey(storage);
-    expect(readKey(storage)).toBeNull();
+    writeKey(`sk-ant-${'x'.repeat(60)}`, storage, STORAGE_KEY);
+    clearKey(storage, STORAGE_KEY);
+    expect(readKey(storage, STORAGE_KEY)).toBeNull();
   });
 
   it('survives storage that throws, as it does in private browsing', () => {
@@ -65,18 +67,18 @@ describe('the key store', () => {
       getItem: () => { throw new Error('denied'); },
       setItem: () => { throw new Error('denied'); },
     };
-    expect(readKey(hostile)).toBeNull();
-    expect(() => writeKey(`sk-ant-${'x'.repeat(60)}`, hostile)).not.toThrow();
+    expect(readKey(hostile, STORAGE_KEY)).toBeNull();
+    expect(() => writeKey(`sk-ant-${'x'.repeat(60)}`, hostile, STORAGE_KEY)).not.toThrow();
   });
 
   it('never puts the rejected value in the error it throws', () => {
     // A mistyped key is still a secret, and this error reaches the UI.
     const attempt = `sk-ant-oops${'y'.repeat(20)}-typo`;
     try {
-      writeKey('not-a-key-at-all', memoryStorage());
+      writeKey('not-a-key-at-all', memoryStorage(), STORAGE_KEY);
     } catch (error) {
       expect((error as Error).message).not.toContain('not-a-key-at-all');
     }
-    expect(() => writeKey(attempt.slice(0, 10), memoryStorage())).toThrow(/does not look like/i);
+    expect(() => writeKey(attempt.slice(0, 10), memoryStorage(), STORAGE_KEY)).toThrow(/does not look like/i);
   });
 });

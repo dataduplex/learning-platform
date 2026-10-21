@@ -30,9 +30,12 @@ interface Turn {
 export function useTutor({
   lessonId,
   transport,
+  basePath,
 }: {
   lessonId: string;
   transport: TutorTransport;
+  /** The path prefix the site is built for, so the lesson context loads from under it. */
+  basePath: string;
 }) {
   const [context, setContext] = useState<LessonContext | null>(null);
   const [state, setState] = useState<TutorState>(EMPTY);
@@ -41,9 +44,9 @@ export function useTutor({
 
   useEffect(() => {
     let live = true;
-    void loadLessonContext(lessonId).then((loaded) => { if (live) setContext(loaded); });
+    void loadLessonContext(lessonId, basePath).then((loaded) => { if (live) setContext(loaded); });
     return () => { live = false; };
-  }, [lessonId]);
+  }, [lessonId, basePath]);
 
   // A panel that unmounts mid-stream must not leave the request running.
   useEffect(() => () => abort.current?.abort(), []);

@@ -5,15 +5,16 @@ import { KeyGate } from './KeyGate';
 import { memoryStorage } from '@/test/render';
 
 const KEY = `sk-ant-${'x'.repeat(60)}`;
+const STORAGE_KEY = 'test-course:tutor-key';
 
 describe('KeyGate', () => {
   it('explains where the key goes before asking for it', () => {
-    render(<KeyGate storage={memoryStorage()} onSaved={vi.fn()} />);
+    render(<KeyGate storageKey={STORAGE_KEY} storage={memoryStorage()} onSaved={vi.fn()} />);
     expect(screen.getByText(/stays in this browser/i)).toBeInTheDocument();
   });
 
   it('links to where a key comes from', () => {
-    render(<KeyGate storage={memoryStorage()} onSaved={vi.fn()} />);
+    render(<KeyGate storageKey={STORAGE_KEY} storage={memoryStorage()} onSaved={vi.fn()} />);
     expect(screen.getByRole('link', { name: /console/i })).toHaveAttribute(
       'href',
       'https://console.anthropic.com/settings/keys',
@@ -21,7 +22,7 @@ describe('KeyGate', () => {
   });
 
   it('uses a password field so the key is not left on screen', () => {
-    render(<KeyGate storage={memoryStorage()} onSaved={vi.fn()} />);
+    render(<KeyGate storageKey={STORAGE_KEY} storage={memoryStorage()} onSaved={vi.fn()} />);
     expect(screen.getByLabelText(/api key/i)).toHaveAttribute('type', 'password');
   });
 
@@ -29,17 +30,17 @@ describe('KeyGate', () => {
     const user = userEvent.setup();
     const storage = memoryStorage();
     const onSaved = vi.fn();
-    render(<KeyGate storage={storage} onSaved={onSaved} />);
+    render(<KeyGate storageKey={STORAGE_KEY} storage={storage} onSaved={onSaved} />);
     await user.type(screen.getByLabelText(/api key/i), KEY);
     await user.click(screen.getByRole('button', { name: /save/i }));
     expect(onSaved).toHaveBeenCalled();
-    expect(storage.getItem('llm-math-course:tutor-key')).toBe(KEY);
+    expect(storage.getItem(STORAGE_KEY)).toBe(KEY);
   });
 
   it('rejects an implausible key with a message that does not echo it', async () => {
     const user = userEvent.setup();
     const onSaved = vi.fn();
-    render(<KeyGate storage={memoryStorage()} onSaved={onSaved} />);
+    render(<KeyGate storageKey={STORAGE_KEY} storage={memoryStorage()} onSaved={onSaved} />);
     await user.type(screen.getByLabelText(/api key/i), 'hunter2');
     await user.click(screen.getByRole('button', { name: /save/i }));
     const alert = screen.getByRole('alert');
@@ -50,7 +51,7 @@ describe('KeyGate', () => {
 
   it('does not leave the key in the field after saving it', async () => {
     const user = userEvent.setup();
-    render(<KeyGate storage={memoryStorage()} onSaved={vi.fn()} />);
+    render(<KeyGate storageKey={STORAGE_KEY} storage={memoryStorage()} onSaved={vi.fn()} />);
     const field = screen.getByLabelText(/api key/i);
     await user.type(field, KEY);
     await user.click(screen.getByRole('button', { name: /save/i }));
@@ -70,7 +71,7 @@ describe('KeyGate', () => {
       removeItem: vi.fn(),
       setItem: () => { throw new DOMException('denied', 'QuotaExceededError'); },
     };
-    render(<KeyGate storage={hostile} onSaved={onSaved} />);
+    render(<KeyGate storageKey={STORAGE_KEY} storage={hostile} onSaved={onSaved} />);
     await user.type(screen.getByLabelText(/api key/i), KEY);
     await user.click(screen.getByRole('button', { name: /save/i }));
     expect(onSaved).toHaveBeenCalled();

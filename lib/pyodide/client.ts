@@ -18,9 +18,9 @@ export interface PyodideClient {
   dispose(): void;
 }
 
-/** The real worker. Constructed lazily so opening a lesson costs no download. */
-export function browserWorker(): WorkerLike {
-  return new Worker(withBasePath('/pyodide-worker.js'));
+/** The real worker, served from under the site's base path. */
+export function browserWorker(basePath: string): WorkerLike {
+  return new Worker(withBasePath(basePath, '/pyodide-worker.js'));
 }
 
 export function createPyodideClient({ worker }: { worker: WorkerLike }): PyodideClient {

@@ -31,10 +31,11 @@ function isLessonContext(value: unknown): value is LessonContext {
 /** Null means "no context available", which the tutor treats as a normal state. */
 export async function loadLessonContext(
   lessonId: string,
+  basePath: string,
   fetcher: typeof fetch = fetch,
 ): Promise<LessonContext | null> {
   try {
-    const response = await fetcher(withBasePath(`/lesson-context/${lessonId}.json`));
+    const response = await fetcher(withBasePath(basePath, `/lesson-context/${lessonId}.json`));
     if (!response.ok) return null;
     const payload: unknown = await response.json();
     return isLessonContext(payload) ? payload : null;

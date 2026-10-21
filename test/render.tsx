@@ -2,6 +2,7 @@ import { render, type RenderOptions, type RenderResult } from '@testing-library/
 import type { ReactElement, ReactNode } from 'react';
 import { expect } from 'vitest';
 import { CourseProvider } from '../lib/course/context';
+import { progressStorageKey } from '../lib/course/keys';
 import type { Course } from '../lib/course/types';
 import { ProgressProvider, createLocalStorageStore, type ProgressStore } from '../lib/progress';
 import { TEST_COURSE } from './fixtures';
@@ -35,6 +36,7 @@ export function renderWithProgress(
   const store = provided ?? createLocalStorageStore({
     storage: memoryStorage(),
     now: () => 1_700_000_000_000,
+    key: progressStorageKey(course.identity.storageKeyPrefix),
   });
   const wrapper = ({ children }: { children: ReactNode }) => (
     <CourseProvider course={course}>

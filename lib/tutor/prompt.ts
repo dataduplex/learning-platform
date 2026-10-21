@@ -1,3 +1,4 @@
+import type { TutorPersona } from '../course/types';
 import { contextToPromptBlock } from './context';
 import type { TutorMessage, TutorRequest } from './types';
 
@@ -12,10 +13,8 @@ export interface RequestBlocks {
   readonly messages: readonly TutorMessage[];
 }
 
-export const SYSTEM_PROMPT = [
-  'You are a tutor inside an interactive course on the mathematics behind large language',
-  'models. The learner is a working software engineer who studied calculus and linear',
-  'algebra years ago and remembers the vocabulary but not the mechanics.',
+/** The rules every course's tutor follows, after the two sentences that name the course and the learner. */
+const RULES = [
   '',
   'How to answer:',
   '- Start from the concrete. Give a small worked example with actual numbers before any',
@@ -37,8 +36,17 @@ export const SYSTEM_PROMPT = [
   '  costs the learner far more than an admission of uncertainty.',
 ].join('\n');
 
-export function buildRequestBlocks(request: TutorRequest): RequestBlocks {
-  const system: SystemBlock[] = [{ type: 'text', text: SYSTEM_PROMPT }];
+/** Byte-stable for a given persona, so the block it opens caches across questions. */
+export function systemPrompt(persona: TutorPersona): string {
+  return [
+    `You are a tutor inside an interactive course on ${persona.subject}.`,
+    `The learner is ${persona.learner}.`,
+    RULES,
+  ].join('\n');
+}
+
+export function buildRequestBlocks(request: TutorRequest, prompt: string): RequestBlocks {
+  const system: SystemBlock[] = [{ type: 'text', text: prompt }];
 
   if (request.context !== null) {
     // Cached: identical for every question about this lesson, and by far the largest block.

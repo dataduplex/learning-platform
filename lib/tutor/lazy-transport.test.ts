@@ -3,6 +3,7 @@ import { createLazyBrowserTransport } from './lazy-transport';
 import { TutorError } from './types';
 
 const KEY = `sk-ant-${'x'.repeat(60)}`;
+const OPTIONS = { key: 'test-course:tutor-key', systemPrompt: 'You are a tutor.' };
 
 function storageWith(key: string | null): Storage {
   return {
@@ -17,12 +18,12 @@ function storageWith(key: string | null): Storage {
 
 describe('createLazyBrowserTransport', () => {
   it('answers isReady from the key store alone, with no request', () => {
-    expect(createLazyBrowserTransport(storageWith(KEY)).isReady()).toBe(true);
-    expect(createLazyBrowserTransport(storageWith(null)).isReady()).toBe(false);
+    expect(createLazyBrowserTransport(storageWith(KEY), OPTIONS).isReady()).toBe(true);
+    expect(createLazyBrowserTransport(storageWith(null), OPTIONS).isReady()).toBe(false);
   });
 
   it('still reports a missing key as no-key once asked', async () => {
-    const transport = createLazyBrowserTransport(storageWith(null));
+    const transport = createLazyBrowserTransport(storageWith(null), OPTIONS);
     const consume = async () => {
       // The error arrives on the first pull, so nothing may be yielded before it.
       for await (const chunk of transport.ask({ context: null, history: [], question: 'Hi' })) {

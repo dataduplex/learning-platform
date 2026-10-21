@@ -3,6 +3,7 @@ import { createBrowserKeyTransport } from './browser-key-transport';
 import { TutorError } from './types';
 
 const KEY = `sk-ant-${'x'.repeat(60)}`;
+const OPTIONS = { key: 'test-course:tutor-key', systemPrompt: 'You are a tutor.' };
 
 function storageWith(key: string | null): Storage {
   return {
@@ -50,7 +51,7 @@ async function collect(iterable: AsyncIterable<{ kind: string; text?: string }>)
 describe('createBrowserKeyTransport', () => {
   it('is not ready without a key', () => {
     const transport = createBrowserKeyTransport({
-      storage: storageWith(null),
+      ...OPTIONS, storage: storageWith(null),
       createClient: () => clientYielding([]),
     });
     expect(transport.isReady()).toBe(false);
@@ -58,7 +59,7 @@ describe('createBrowserKeyTransport', () => {
 
   it('is ready once a key is stored', () => {
     const transport = createBrowserKeyTransport({
-      storage: storageWith(KEY),
+      ...OPTIONS, storage: storageWith(KEY),
       createClient: () => clientYielding([]),
     });
     expect(transport.isReady()).toBe(true);
@@ -66,7 +67,7 @@ describe('createBrowserKeyTransport', () => {
 
   it('throws a no-key error rather than calling out without one', async () => {
     const createClient = vi.fn(() => clientYielding([]));
-    const transport = createBrowserKeyTransport({ storage: storageWith(null), createClient });
+    const transport = createBrowserKeyTransport({ ...OPTIONS, storage: storageWith(null), createClient });
     await expect(collect(transport.ask({ context: null, history: [], question: 'Hi' })))
       .rejects.toThrow(TutorError);
     expect(createClient).not.toHaveBeenCalled();
@@ -74,7 +75,7 @@ describe('createBrowserKeyTransport', () => {
 
   it('streams text deltas through as chunks, then done', async () => {
     const transport = createBrowserKeyTransport({
-      storage: storageWith(KEY),
+      ...OPTIONS, storage: storageWith(KEY),
       createClient: () => clientYielding(TEXT_EVENTS),
     });
     const chunks = await collect(transport.ask({ context: null, history: [], question: 'Hi' }));
@@ -88,7 +89,7 @@ describe('createBrowserKeyTransport', () => {
   it('sends the documented model and adaptive thinking', async () => {
     let body: Record<string, unknown> = {};
     const transport = createBrowserKeyTransport({
-      storage: storageWith(KEY),
+      ...OPTIONS, storage: storageWith(KEY),
       createClient: () => clientYielding(TEXT_EVENTS, (sent) => { body = sent as Record<string, unknown>; }),
     });
     await collect(transport.ask({ context: null, history: [], question: 'Hi' }));
@@ -101,7 +102,7 @@ describe('createBrowserKeyTransport', () => {
   it('leaves room for thinking as well as the answer', async () => {
     let body: Record<string, unknown> = {};
     const transport = createBrowserKeyTransport({
-      storage: storageWith(KEY),
+      ...OPTIONS, storage: storageWith(KEY),
       createClient: () => clientYielding(TEXT_EVENTS, (sent) => { body = sent as Record<string, unknown>; }),
     });
     await collect(transport.ask({ context: null, history: [], question: 'Hi' }));
@@ -111,7 +112,7 @@ describe('createBrowserKeyTransport', () => {
   it('sends no sampling parameters, which this model rejects', async () => {
     let body: Record<string, unknown> = {};
     const transport = createBrowserKeyTransport({
-      storage: storageWith(KEY),
+      ...OPTIONS, storage: storageWith(KEY),
       createClient: () => clientYielding(TEXT_EVENTS, (sent) => { body = sent as Record<string, unknown>; }),
     });
     await collect(transport.ask({ context: null, history: [], question: 'Hi' }));
@@ -122,7 +123,7 @@ describe('createBrowserKeyTransport', () => {
 
   it('surfaces the cache counters, so the caching claim is checkable', async () => {
     const transport = createBrowserKeyTransport({
-      storage: storageWith(KEY),
+      ...OPTIONS, storage: storageWith(KEY),
       createClient: () => clientYielding([
         {
           type: 'message_start',
@@ -137,7 +138,7 @@ describe('createBrowserKeyTransport', () => {
 
   it('treats absent cache counters as zero rather than undefined', async () => {
     const transport = createBrowserKeyTransport({
-      storage: storageWith(KEY),
+      ...OPTIONS, storage: storageWith(KEY),
       createClient: () => clientYielding([
         { type: 'message_start', message: { usage: { input_tokens: 12 } } },
         ...TEXT_EVENTS,
@@ -149,7 +150,7 @@ describe('createBrowserKeyTransport', () => {
 
   it('reports a refusal as its own error kind, before reading any content', async () => {
     const transport = createBrowserKeyTransport({
-      storage: storageWith(KEY),
+      ...OPTIONS, storage: storageWith(KEY),
       createClient: () => clientYielding([
         { type: 'message_delta', delta: { stop_reason: 'refusal' } },
       ]),
@@ -160,7 +161,7 @@ describe('createBrowserKeyTransport', () => {
 
   it('maps a 401 to a bad-key error', async () => {
     const transport = createBrowserKeyTransport({
-      storage: storageWith(KEY),
+      ...OPTIONS, storage: storageWith(KEY),
       createClient: () => ({
         messages: {
           stream: () => { throw Object.assign(new Error('unauthorized'), { status: 401 }); },
@@ -173,7 +174,7 @@ describe('createBrowserKeyTransport', () => {
 
   it('maps a 429 to a rate-limited error', async () => {
     const transport = createBrowserKeyTransport({
-      storage: storageWith(KEY),
+      ...OPTIONS, storage: storageWith(KEY),
       createClient: () => ({
         messages: {
           stream: () => { throw Object.assign(new Error('slow down'), { status: 429 }); },
@@ -186,7 +187,7 @@ describe('createBrowserKeyTransport', () => {
 
   it('never puts the key in an error message', async () => {
     const transport = createBrowserKeyTransport({
-      storage: storageWith(KEY),
+      ...OPTIONS, storage: storageWith(KEY),
       createClient: () => ({
         messages: {
           stream: () => { throw Object.assign(new Error(`bad key ${KEY}`), { status: 401 }); },
@@ -200,7 +201,7 @@ describe('createBrowserKeyTransport', () => {
 
   it('never puts the key in an error raised mid-stream either', async () => {
     const transport = createBrowserKeyTransport({
-      storage: storageWith(KEY),
+      ...OPTIONS, storage: storageWith(KEY),
       createClient: () => ({
         messages: {
           stream: () => ({
@@ -220,7 +221,7 @@ describe('createBrowserKeyTransport', () => {
   it('stops when the caller aborts', async () => {
     const controller = new AbortController();
     const transport = createBrowserKeyTransport({
-      storage: storageWith(KEY),
+      ...OPTIONS, storage: storageWith(KEY),
       createClient: () => clientYielding(TEXT_EVENTS),
     });
     controller.abort();

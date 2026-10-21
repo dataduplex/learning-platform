@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { renderWithCourse } from '../../test/render';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { TutorPanel } from './TutorPanel';
@@ -31,21 +32,21 @@ function questionBox() {
 
 describe('TutorPanel', () => {
   it('starts closed, so it never covers the lesson uninvited', () => {
-    render(<TutorPanel lessonId="vectors-as-meaning" transport={transportYielding([])} />);
+    renderWithCourse(<TutorPanel lessonId="vectors-as-meaning" transport={transportYielding([])} />);
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /ask about this lesson/i })).toBeInTheDocument();
   });
 
   it('opens on click and focuses the input', async () => {
     const user = userEvent.setup();
-    render(<TutorPanel lessonId="vectors-as-meaning" transport={transportYielding([])} />);
+    renderWithCourse(<TutorPanel lessonId="vectors-as-meaning" transport={transportYielding([])} />);
     await open(user);
     expect(questionBox()).toHaveFocus();
   });
 
   it('shows the key gate when the transport is not ready', async () => {
     const user = userEvent.setup();
-    render(<TutorPanel lessonId="vectors-as-meaning" transport={transportYielding([], false)} />);
+    renderWithCourse(<TutorPanel lessonId="vectors-as-meaning" transport={transportYielding([], false)} />);
     await open(user);
     expect(screen.getByLabelText(/api key/i)).toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: /your question/i })).not.toBeInTheDocument();
@@ -53,7 +54,7 @@ describe('TutorPanel', () => {
 
   it('streams an answer into the transcript', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithCourse(
       <TutorPanel
         lessonId="vectors-as-meaning"
         transport={transportYielding(['A vector ', 'is a list.'])}
@@ -69,7 +70,7 @@ describe('TutorPanel', () => {
 
   it('shows the learner their own question immediately', async () => {
     const user = userEvent.setup();
-    render(<TutorPanel lessonId="vectors-as-meaning" transport={transportYielding(['ok'])} />);
+    renderWithCourse(<TutorPanel lessonId="vectors-as-meaning" transport={transportYielding(['ok'])} />);
     await open(user);
     await user.type(questionBox(), 'Why?');
     await user.click(screen.getByRole('button', { name: /send/i }));
@@ -78,7 +79,7 @@ describe('TutorPanel', () => {
 
   it('clears the input after sending, so the next question starts clean', async () => {
     const user = userEvent.setup();
-    render(<TutorPanel lessonId="vectors-as-meaning" transport={transportYielding(['ok'])} />);
+    renderWithCourse(<TutorPanel lessonId="vectors-as-meaning" transport={transportYielding(['ok'])} />);
     await open(user);
     const input = questionBox();
     await user.type(input, 'Why?');
@@ -90,7 +91,7 @@ describe('TutorPanel', () => {
     const user = userEvent.setup();
     const transport = transportYielding(['ok']);
     const ask = vi.spyOn(transport, 'ask');
-    render(<TutorPanel lessonId="vectors-as-meaning" transport={transport} />);
+    renderWithCourse(<TutorPanel lessonId="vectors-as-meaning" transport={transport} />);
     await open(user);
     await user.click(screen.getByRole('button', { name: /send/i }));
     expect(ask).not.toHaveBeenCalled();
@@ -106,7 +107,7 @@ describe('TutorPanel', () => {
         yield { kind: 'done' as const };
       },
     };
-    render(<TutorPanel lessonId="vectors-as-meaning" transport={transport} />);
+    renderWithCourse(<TutorPanel lessonId="vectors-as-meaning" transport={transport} />);
     await open(user);
     await user.type(questionBox(), 'Why?');
     await user.click(screen.getByRole('button', { name: /send/i }));
@@ -116,7 +117,7 @@ describe('TutorPanel', () => {
 
   it('shows a rejected key as an actionable message, not a stack trace', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithCourse(
       <TutorPanel
         lessonId="vectors-as-meaning"
         transport={transportThrowing(new TutorError('bad-key', 'The API key was rejected.'))}
@@ -133,7 +134,7 @@ describe('TutorPanel', () => {
 
   it('offers to retry after a rate limit', async () => {
     const user = userEvent.setup();
-    render(
+    renderWithCourse(
       <TutorPanel
         lessonId="vectors-as-meaning"
         transport={transportThrowing(new TutorError('rate-limited', 'Rate limited.'))}
@@ -161,7 +162,7 @@ describe('TutorPanel', () => {
         yield { kind: 'done' as const };
       },
     };
-    render(<TutorPanel lessonId="vectors-as-meaning" transport={transport} />);
+    renderWithCourse(<TutorPanel lessonId="vectors-as-meaning" transport={transport} />);
     await open(user);
     await user.type(questionBox(), 'Why?');
     await user.click(screen.getByRole('button', { name: /send/i }));
@@ -190,7 +191,7 @@ describe('TutorPanel', () => {
         yield { kind: 'done' as const };
       },
     };
-    render(<TutorPanel lessonId="vectors-as-meaning" transport={transport} />);
+    renderWithCourse(<TutorPanel lessonId="vectors-as-meaning" transport={transport} />);
     await open(user);
     await user.type(questionBox(), 'What is a vector?');
     await user.click(screen.getByRole('button', { name: /send/i }));
@@ -216,7 +217,7 @@ describe('TutorPanel', () => {
         yield { kind: 'done' as const };
       },
     };
-    render(<TutorPanel lessonId="vectors-as-meaning" transport={transport} />);
+    renderWithCourse(<TutorPanel lessonId="vectors-as-meaning" transport={transport} />);
     await open(user);
     await user.type(questionBox(), 'Why?');
     await user.click(screen.getByRole('button', { name: /send/i }));
@@ -227,7 +228,7 @@ describe('TutorPanel', () => {
 
   it('says what the opener will do, in both states', async () => {
     const user = userEvent.setup();
-    render(<TutorPanel lessonId="vectors-as-meaning" transport={transportYielding([])} />);
+    renderWithCourse(<TutorPanel lessonId="vectors-as-meaning" transport={transportYielding([])} />);
     const opener = screen.getByRole('button', { name: /ask about this lesson/i });
     await user.click(opener);
     // Still the same control - it must not read as a second invitation to ask.
@@ -240,7 +241,7 @@ describe('TutorPanel', () => {
 
   it('closes on Escape and returns focus to the opener', async () => {
     const user = userEvent.setup();
-    render(<TutorPanel lessonId="vectors-as-meaning" transport={transportYielding([])} />);
+    renderWithCourse(<TutorPanel lessonId="vectors-as-meaning" transport={transportYielding([])} />);
     const opener = screen.getByRole('button', { name: /ask about this lesson/i });
     await user.click(opener);
     await user.keyboard('{Escape}');

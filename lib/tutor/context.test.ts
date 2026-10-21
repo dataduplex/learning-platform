@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { contextToPromptBlock, loadLessonContext, type LessonContext } from './context';
 
 const CONTEXT: LessonContext = {
@@ -21,39 +21,31 @@ function fetcherFor(status: number, payload?: unknown) {
 }
 
 describe('loadLessonContext', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-    vi.resetModules();
-  });
-
   it('fetches the manifest for the lesson', async () => {
     const fetcher = fetcherFor(200, CONTEXT);
-    await expect(loadLessonContext('vectors-as-meaning', fetcher)).resolves.toEqual(CONTEXT);
+    await expect(loadLessonContext('vectors-as-meaning', '', fetcher)).resolves.toEqual(CONTEXT);
     expect(fetcher).toHaveBeenCalledWith('/lesson-context/vectors-as-meaning.json');
   });
 
   it('returns null when the lesson has no manifest, rather than throwing', async () => {
     // A lesson listed but not authored is an expected state, not an error.
-    await expect(loadLessonContext('capstone-gpt', fetcherFor(404))).resolves.toBeNull();
+    await expect(loadLessonContext('capstone-gpt', '', fetcherFor(404))).resolves.toBeNull();
   });
 
   it('returns null when the response is not the shape we expect', async () => {
-    await expect(loadLessonContext('vectors-as-meaning', fetcherFor(200, { nope: true })))
+    await expect(loadLessonContext('vectors-as-meaning', '', fetcherFor(200, { nope: true })))
       .resolves.toBeNull();
   });
 
   it('returns null when the network fails, so the tutor degrades quietly', async () => {
     const fetcher = vi.fn(async () => { throw new TypeError('offline'); }) as unknown as typeof fetch;
-    await expect(loadLessonContext('vectors-as-meaning', fetcher)).resolves.toBeNull();
+    await expect(loadLessonContext('vectors-as-meaning', '', fetcher)).resolves.toBeNull();
   });
 
   it('fetches the manifest from under the base path when one is configured', async () => {
-    vi.stubEnv('NEXT_PUBLIC_BASE_PATH', '/engineer/learning/ai/math');
-    vi.resetModules();
-    const { loadLessonContext: load } = await import('./context');
     const fetcher = fetcherFor(200, CONTEXT);
-    await load('train-a-net', fetcher);
-    expect(fetcher).toHaveBeenCalledWith('/engineer/learning/ai/math/lesson-context/train-a-net.json');
+    await loadLessonContext('alpha', '/courses/test', fetcher);
+    expect(fetcher).toHaveBeenCalledWith('/courses/test/lesson-context/alpha.json');
   });
 });
 
