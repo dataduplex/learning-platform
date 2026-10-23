@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { fail } from '../infra/aws.mjs';
-import { ACCOUNT_ID, BUCKET, COURSE_URL, DISTRIBUTION_ID, PREFIX } from '../infra/targets.mjs';
+import { ACCOUNT_ID, BUCKET, DISTRIBUTION_ID, courseFromArgv } from '../infra/targets.mjs';
 import { deployPlan, describeStep, substitute } from './plan.mjs';
 
 const argv = process.argv.slice(2);
@@ -9,6 +9,12 @@ const dryRun = argv.includes('--dry-run');
 const profileAt = argv.indexOf('--profile');
 const profile = profileAt === -1 ? undefined : argv[profileAt + 1];
 if (profile === undefined) fail('Usage: npm run deploy -- --profile <name> [--dry-run]');
+let course;
+try {
+  course = courseFromArgv(argv);
+} catch (error) {
+  fail(error instanceof Error ? error.message : String(error));
+}
 
 /** Runs a command for its trimmed output; a non-zero exit is an error. */
 function output(command, args) {
@@ -31,10 +37,10 @@ const plan = deployPlan({
   commit,
   deployedAt: new Date().toISOString(),
   bucket: BUCKET,
-  prefix: PREFIX,
+  prefix: course.prefix,
   distributionId: DISTRIBUTION_ID,
   profile,
-  courseUrl: COURSE_URL,
+  courseUrl: course.COURSE_URL,
 });
 
 if (dryRun) {
@@ -71,4 +77,4 @@ for (const step of plan) {
   }
 }
 
-console.log(`\nDeployed ${commit} to ${COURSE_URL}`);
+console.log(`\nDeployed ${commit} to ${course.COURSE_URL}`);

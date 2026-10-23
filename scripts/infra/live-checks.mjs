@@ -1,4 +1,4 @@
-import { ASSET_CACHE_CONTROL, BASE_PATH, PAGE_CACHE_CONTROL } from './targets.mjs';
+import { ASSET_CACHE_CONTROL, PAGE_CACHE_CONTROL } from './targets.mjs';
 
 /** One GET without following redirects, reduced to what the checks compare. */
 export async function probe(url, fetchImpl = fetch) {
@@ -17,16 +17,16 @@ export async function probe(url, fetchImpl = fetch) {
 }
 
 /** The fixed rows of the check table; paths are absolute from the origin. */
-export function liveChecks({ basePath = BASE_PATH, commit }) {
+export function liveChecks({ basePath, lesson, commit }) {
   return [
     { name: 'course map', path: `${basePath}/`, status: 200, contentType: 'text/html' },
     {
-      name: 'lesson page', path: `${basePath}/lessons/train-a-net/`, status: 200,
+      name: 'lesson page', path: `${basePath}/lessons/${lesson}/`, status: 200,
       contentType: 'text/html', cacheControl: PAGE_CACHE_CONTROL,
     },
-    { name: 'unslashed lesson URL', path: `${basePath}/lessons/train-a-net`, status: 301, location: `${basePath}/lessons/train-a-net/` },
+    { name: 'unslashed lesson URL', path: `${basePath}/lessons/${lesson}`, status: 301, location: `${basePath}/lessons/${lesson}/` },
     { name: 'bare prefix', path: basePath, status: 301, location: `${basePath}/` },
-    { name: 'lesson context', path: `${basePath}/lesson-context/train-a-net.json`, status: 200, contentType: 'application/json' },
+    { name: 'lesson context', path: `${basePath}/lesson-context/${lesson}.json`, status: 200, contentType: 'application/json' },
     { name: 'version', path: `${basePath}/version.txt`, status: 200, contentType: 'text/plain', firstLine: commit },
     { name: 'missing lesson', path: `${basePath}/lessons/no-such-lesson/`, status: 404 },
   ];

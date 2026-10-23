@@ -3,8 +3,10 @@ import {
   COMBINED_HANDLER, DENIED_ADDRESS, EDGE_SIZE_LIMIT, firstAllowedAddress, functionChecks,
   mismatch, runLocally, spliceRouting, viewerEvent,
 } from './function-source.mjs';
-import { readCourseRoutingSource } from './load-course-routing.mjs';
-import { BASE_PATH } from './targets.mjs';
+import { renderCourseRouting } from './load-course-routing.mjs';
+import { courseTarget } from './targets.mjs';
+
+const { BASE_PATH } = courseTarget('llm-math');
 
 const LIVE = `var ALLOWED = ['203.0.113.', '198.51.100.7'];
 
@@ -17,7 +19,7 @@ function handler(event) {
 }
 `;
 
-const combined = spliceRouting(LIVE, readCourseRoutingSource());
+const combined = spliceRouting(LIVE, renderCourseRouting([BASE_PATH]));
 
 describe('spliceRouting', () => {
   it('keeps every byte before the handler', () => {
@@ -37,7 +39,7 @@ describe('spliceRouting', () => {
   });
 
   it('refuses a source that already carries the routing', () => {
-    expect(() => spliceRouting(combined, readCourseRoutingSource())).toThrow(/already carries/);
+    expect(() => spliceRouting(combined, renderCourseRouting([BASE_PATH]))).toThrow(/already carries/);
   });
 
   it('stays far inside the runtime limit', () => {
@@ -66,12 +68,12 @@ describe('firstAllowedAddress', () => {
 });
 
 describe('the combined handler', () => {
-  const checks = functionChecks({ allowed: firstAllowedAddress(LIVE), denied: DENIED_ADDRESS, basePath: BASE_PATH });
+  const checks = functionChecks({ allowed: firstAllowedAddress(LIVE), denied: DENIED_ADDRESS, basePaths: [BASE_PATH] });
 
   it('has six checks: an allowed root, a denied page, and the four course rows', () => {
     expect(checks.map((check) => check.name)).toEqual([
-      'allowed address, dashboard root', 'denied address, course page', 'bare prefix',
-      'directory URL', 'unslashed page', 'file',
+      'allowed address, dashboard root', `denied address, course page ${BASE_PATH}`, `bare prefix ${BASE_PATH}`,
+      `directory URL ${BASE_PATH}`, `unslashed page ${BASE_PATH}`, `file ${BASE_PATH}`,
     ]);
   });
 

@@ -3,13 +3,21 @@ import { fail, latestSnapshot, readJson } from './aws.mjs';
 import {
   chunkCheck, firstChunkPath, fontCheck, katexFontPath, liveChecks, probe, problems, stylesheetCheck, stylesheetPath,
 } from './live-checks.mjs';
-import { BASE_PATH, ORIGIN_URL } from './targets.mjs';
+import { ORIGIN_URL, courseFromArgv } from './targets.mjs';
 
-const originAt = process.argv.indexOf('--origin');
-if (originAt !== -1 && process.argv[originAt + 1] === undefined) {
+const argv = process.argv.slice(2);
+const originAt = argv.indexOf('--origin');
+if (originAt !== -1 && argv[originAt + 1] === undefined) {
   fail('--origin needs a value, for example --origin http://localhost:4322');
 }
-const origin = originAt === -1 ? ORIGIN_URL : process.argv[originAt + 1];
+const origin = originAt === -1 ? ORIGIN_URL : argv[originAt + 1];
+let course;
+try {
+  course = courseFromArgv(argv);
+} catch (error) {
+  fail(error instanceof Error ? error.message : String(error));
+}
+const { BASE_PATH, SAMPLE_LESSON } = course;
 const commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 
 const rows = [];
@@ -27,9 +35,9 @@ async function run(check) {
   return result;
 }
 
-for (const check of liveChecks({ commit })) await run(check);
+for (const check of liveChecks({ basePath: BASE_PATH, lesson: SAMPLE_LESSON, commit })) await run(check);
 
-const page = await probe(`${origin}${BASE_PATH}/lessons/train-a-net/`);
+const page = await probe(`${origin}${BASE_PATH}/lessons/${SAMPLE_LESSON}/`);
 if (page.status !== 200) {
   console.table(rows);
   fail(`The lesson page answered ${page.status}; the asset rows need a 200 page to read.`);

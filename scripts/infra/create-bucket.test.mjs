@@ -3,7 +3,7 @@ import { LIFECYCLE, PUBLIC_ACCESS_BLOCK, bucketPolicy, bucketSettings } from './
 
 const target = {
   bucket: 'tvp-engineer-learning-dev',
-  prefix: 'engineer/learning/ai/math',
+  prefixes: ['engineer/learning/ai/math'],
   distributionArn: 'arn:aws:cloudfront::925653736308:distribution/E2EM88PLKUPPT8',
 };
 
@@ -20,6 +20,15 @@ describe('bucketPolicy', () => {
       'arn:aws:s3:::tvp-engineer-learning-dev',
     ]);
     expect(statement.Condition).toEqual({ StringEquals: { 'AWS:SourceArn': target.distributionArn } });
+  });
+
+  it('grants one object resource per course prefix', () => {
+    const policy = bucketPolicy({ ...target, prefixes: ['engineer/learning/ai/math', 'engineer/learning/streaming'] });
+    expect(policy.Statement[0].Resource).toEqual([
+      'arn:aws:s3:::tvp-engineer-learning-dev/engineer/learning/ai/math/*',
+      'arn:aws:s3:::tvp-engineer-learning-dev/engineer/learning/streaming/*',
+      'arn:aws:s3:::tvp-engineer-learning-dev',
+    ]);
   });
 });
 

@@ -1,5 +1,6 @@
-// Runs in the cloudfront-js-1.0 runtime: ES5 syntax, no modules.
-var COURSE_PREFIX = '/engineer/learning/ai/math';
+// Runs in the cloudfront-js-1.0 runtime: ES5 syntax, no modules. A template: the
+// empty list below stands for the deployed prefixes.
+var COURSE_PREFIXES = [];
 
 function redirectTo(location) {
   return {
@@ -9,10 +10,19 @@ function redirectTo(location) {
   };
 }
 
+function coursePrefixOf(uri) {
+  for (var i = 0; i < COURSE_PREFIXES.length; i += 1) {
+    var prefix = COURSE_PREFIXES[i];
+    if (uri === prefix || uri.indexOf(prefix + '/') === 0) return prefix;
+  }
+  return null;
+}
+
 function routeCourse(request) {
   var uri = request.uri;
-  if (uri === COURSE_PREFIX) return redirectTo(COURSE_PREFIX + '/');
-  if (uri.indexOf(COURSE_PREFIX + '/') !== 0) return request;
+  var prefix = coursePrefixOf(uri);
+  if (prefix === null) return request;
+  if (uri === prefix) return redirectTo(prefix + '/');
   if (uri.charAt(uri.length - 1) === '/') {
     request.uri = uri + 'index.html';
     return request;

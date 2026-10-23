@@ -6,7 +6,7 @@ import { listedOacs } from './create-oac.mjs';
 import { withCourse } from './distribution-config.mjs';
 import { probe } from './live-checks.mjs';
 import {
-  BASE_PATH, BUCKET_DOMAIN, CACHE_POLICY_NAME, DISTRIBUTION_ID, OAC_NAME, ORIGIN_ID, ORIGIN_URL,
+  BUCKET_DOMAIN, CACHE_POLICY_NAME, COURSES, DISTRIBUTION_ID, OAC_NAME, ORIGIN_ID, ORIGIN_URL, courseTarget,
 } from './targets.mjs';
 
 const pretty = (value) => `${JSON.stringify(value, null, 2)}\n`;
@@ -20,7 +20,7 @@ async function main() {
   writeSnapshot(`distribution-${DISTRIBUTION_ID}.etag`, `${ETag}\n`);
   console.log(`Saved the current configuration (ETag ${ETag}) to ${snapshot}`);
 
-  // The first measurement is the one check-live.mjs compares against, so later runs keep it.
+  // The root pin is written once; later runs keep it.
   const existingPin = latestSnapshot('dashboard-root.json');
   if (existingPin === null) {
     const root = await probe(`${ORIGIN_URL}/`);
@@ -35,9 +35,13 @@ async function main() {
   const policy = findCachePolicy(aws(profile, ['cloudfront', 'list-cache-policies', '--type', 'custom']), CACHE_POLICY_NAME);
   if (policy === null) fail(`No cache policy named ${CACHE_POLICY_NAME}: run create-cache-policy.mjs first.`);
 
-  const next = withCourse(config, {
-    originId: ORIGIN_ID, bucketDomain: BUCKET_DOMAIN, oacId: oac.Id, pathPattern: `${BASE_PATH}/*`, cachePolicyId: policy.Id,
-  });
+  // One behaviour per course, all on the one origin; a rerun replaces each in place.
+  let next = config;
+  for (const id of Object.keys(COURSES)) {
+    next = withCourse(next, {
+      originId: ORIGIN_ID, bucketDomain: BUCKET_DOMAIN, oacId: oac.Id, pathPattern: courseTarget(id).PATH_PATTERN, cachePolicyId: policy.Id,
+    });
+  }
   const candidate = writeSnapshot(`distribution-${DISTRIBUTION_ID}-candidate.json`, pretty(next));
   console.log('Diff against the current configuration:');
   showDiff(snapshot, candidate);

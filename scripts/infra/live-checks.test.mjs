@@ -8,7 +8,7 @@ const BASE = '/engineer/learning/ai/math';
 
 describe('liveChecks', () => {
   it('lists the fixed rows of the design in order, with absolute paths', () => {
-    const rows = liveChecks({ basePath: BASE, commit: 'abc123' });
+    const rows = liveChecks({ basePath: BASE, lesson: 'train-a-net', commit: 'abc123' });
     expect(rows.map((row) => [row.name, row.path, row.status])).toEqual([
       ['course map', `${BASE}/`, 200],
       ['lesson page', `${BASE}/lessons/train-a-net/`, 200],

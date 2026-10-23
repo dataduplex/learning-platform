@@ -1,5 +1,5 @@
 import { aws, awsWrite, describeAws, fail, parseFlags, sameJson } from './aws.mjs';
-import { BUCKET, DISTRIBUTION_ARN, PREFIX, REGION } from './targets.mjs';
+import { BUCKET, COURSES, DISTRIBUTION_ARN, REGION } from './targets.mjs';
 
 export const PUBLIC_ACCESS_BLOCK = {
   BlockPublicAcls: true,
@@ -26,8 +26,8 @@ export const LIFECYCLE = {
   }],
 };
 
-/** Reads for one distribution: objects under the prefix, and the listing that turns a missing key into a 404. */
-export function bucketPolicy({ bucket, prefix, distributionArn }) {
+/** Reads for one distribution: objects under every course prefix, and the listing that turns a missing key into a 404. */
+export function bucketPolicy({ bucket, prefixes, distributionArn }) {
   return {
     Version: '2012-10-17',
     Statement: [{
@@ -35,7 +35,7 @@ export function bucketPolicy({ bucket, prefix, distributionArn }) {
       Effect: 'Allow',
       Principal: { Service: 'cloudfront.amazonaws.com' },
       Action: ['s3:GetObject', 's3:ListBucket'],
-      Resource: [`arn:aws:s3:::${bucket}/${prefix}/*`, `arn:aws:s3:::${bucket}`],
+      Resource: [...prefixes.map((prefix) => `arn:aws:s3:::${bucket}/${prefix}/*`), `arn:aws:s3:::${bucket}`],
       Condition: { StringEquals: { 'AWS:SourceArn': distributionArn } },
     }],
   };
@@ -117,7 +117,7 @@ async function main() {
   if (exists) console.log(`Bucket ${BUCKET} exists; comparing its settings.`);
   else awsWrite(flags, ['s3api', 'create-bucket', '--bucket', BUCKET, '--region', REGION]);
 
-  const target = { bucket: BUCKET, prefix: PREFIX, distributionArn: DISTRIBUTION_ARN };
+  const target = { bucket: BUCKET, prefixes: Object.values(COURSES).map((course) => course.prefix), distributionArn: DISTRIBUTION_ARN };
   for (const setting of bucketSettings(target)) {
     const current = exists ? currentSetting(flags.profile, setting) : null;
     if (current !== null && sameJson(current, setting.want)) {

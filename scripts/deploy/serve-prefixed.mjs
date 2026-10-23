@@ -3,7 +3,7 @@ import { stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { extname, normalize, resolve, sep } from 'node:path';
 import { loadCourseRouting } from '../infra/load-course-routing.mjs';
-import { ASSET_CACHE_CONTROL, BASE_PATH, PAGE_CACHE_CONTROL } from '../infra/targets.mjs';
+import { ASSET_CACHE_CONTROL, PAGE_CACHE_CONTROL, courseFromArgv } from '../infra/targets.mjs';
 
 const CONTENT_TYPES = {
   '.html': 'text/html',
@@ -23,7 +23,8 @@ const CONTENT_TYPES = {
 const portAt = process.argv.indexOf('--port');
 const port = portAt === -1 ? 4322 : Number(process.argv[portAt + 1]);
 const root = resolve('out');
-const routeCourse = loadCourseRouting();
+const { BASE_PATH } = courseFromArgv(process.argv);
+const routeCourse = loadCourseRouting([BASE_PATH]);
 
 /** The path alone, decoded and without its query string, as the edge sees it. */
 function routed(url) {

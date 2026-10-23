@@ -5,8 +5,8 @@ import {
 import {
   DENIED_ADDRESS, EDGE_SIZE_LIMIT, firstAllowedAddress, functionChecks, mismatch, runLocally, spliceRouting,
 } from './function-source.mjs';
-import { readCourseRoutingSource } from './load-course-routing.mjs';
-import { BASE_PATH, FUNCTION_NAME } from './targets.mjs';
+import { renderCourseRouting } from './load-course-routing.mjs';
+import { FUNCTION_NAME, basePaths } from './targets.mjs';
 
 /** describe-function answers for the DEVELOPMENT stage unless a stage is named. */
 function describeStage(profile, stage) {
@@ -35,14 +35,14 @@ async function main() {
   const liveSource = readFileSync(snapshot, 'utf8');
   console.log(`Saved the LIVE source (${Buffer.byteLength(liveSource)} bytes, ETag ${live.ETag}) to ${snapshot}`);
 
-  const combined = spliceRouting(liveSource, readCourseRoutingSource());
+  const combined = spliceRouting(liveSource, renderCourseRouting(basePaths()));
   const size = Buffer.byteLength(combined);
   if (size > EDGE_SIZE_LIMIT) fail(`The combined source is ${size} bytes, over the ${EDGE_SIZE_LIMIT} byte limit.`);
   const candidate = writeSnapshot(`${FUNCTION_NAME}-candidate.js`, combined);
   console.log(`Candidate source (${size} bytes) at ${candidate}. Diff against LIVE:`);
   showDiff(snapshot, candidate);
 
-  const checks = functionChecks({ allowed: firstAllowedAddress(liveSource), denied: DENIED_ADDRESS, basePath: BASE_PATH });
+  const checks = functionChecks({ allowed: firstAllowedAddress(liveSource), denied: DENIED_ADDRESS, basePaths: basePaths() });
   for (const check of checks) {
     const problem = mismatch(runLocally(combined, check.event), check.expect);
     if (problem !== null) fail(`Local rehearsal "${check.name}" failed: ${problem}`);

@@ -51,24 +51,24 @@ export function viewerEvent(ip, uri) {
   };
 }
 
-/** The six checks that gate publishing: the allowlist still admits and denies, and the four course rows route. */
-export function functionChecks({ allowed, denied, basePath }) {
-  return [
-    { name: 'allowed address, dashboard root', event: viewerEvent(allowed, '/'), expect: { request: '/' } },
-    { name: 'denied address, course page', event: viewerEvent(denied, `${basePath}/`), expect: { response: 403 } },
-    { name: 'bare prefix', event: viewerEvent(allowed, basePath), expect: { response: 301, location: `${basePath}/` } },
-    { name: 'directory URL', event: viewerEvent(allowed, `${basePath}/`), expect: { request: `${basePath}/index.html` } },
+/** The checks that gate publishing: the allowlist still admits and denies, and every course's rows route. */
+export function functionChecks({ allowed, denied, basePaths }) {
+  const root = { name: 'allowed address, dashboard root', event: viewerEvent(allowed, '/'), expect: { request: '/' } };
+  return [root, ...basePaths.flatMap((basePath) => [
+    { name: `denied address, course page ${basePath}`, event: viewerEvent(denied, `${basePath}/`), expect: { response: 403 } },
+    { name: `bare prefix ${basePath}`, event: viewerEvent(allowed, basePath), expect: { response: 301, location: `${basePath}/` } },
+    { name: `directory URL ${basePath}`, event: viewerEvent(allowed, `${basePath}/`), expect: { request: `${basePath}/index.html` } },
     {
-      name: 'unslashed page',
-      event: viewerEvent(allowed, `${basePath}/lessons/train-a-net`),
-      expect: { response: 301, location: `${basePath}/lessons/train-a-net/` },
+      name: `unslashed page ${basePath}`,
+      event: viewerEvent(allowed, `${basePath}/lessons/example`),
+      expect: { response: 301, location: `${basePath}/lessons/example/` },
     },
     {
-      name: 'file',
+      name: `file ${basePath}`,
       event: viewerEvent(allowed, `${basePath}/_next/static/chunks/main-app.js`),
       expect: { request: `${basePath}/_next/static/chunks/main-app.js` },
     },
-  ];
+  ])];
 }
 
 /**
