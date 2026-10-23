@@ -35,14 +35,6 @@ const COURSE_IMPORT = /(?:from|import\()\s*'(?:@\/|(?:\.\.\/)+)(?:content\/|comp
 /** A string that names this course rather than a course. */
 const COURSE_IDENTITY = /llm-math-course|mathematics of language models|mathematics behind large language|engineer\/learning\/ai\/math/;
 
-/** Files still importing from the course. Each task of cycle 1a shortens this list; it ends empty. */
-const IMPORT_DEBTS = new Set([
-  'scripts/build-lesson-context.mjs',
-]);
-
-/** Files still naming the course. Same rule: it only shrinks. */
-const IDENTITY_DEBTS = new Set<string>([]);
-
 function sources(path: string): string[] {
   if (statSync(path).isFile()) return [path];
   return readdirSync(path, { withFileTypes: true }).flatMap((entry) => {
@@ -62,28 +54,15 @@ function platformFiles(): string[] {
 const read = (file: string) => readFileSync(join(ROOT, file), 'utf8');
 
 describe('platform-bound code', () => {
-  it('imports nothing from the course beyond the known debts', () => {
-    const offenders = platformFiles()
-      .filter((file) => !IMPORT_DEBTS.has(file))
-      .filter((file) => COURSE_IMPORT.test(read(file)));
+  it('imports nothing from the course', () => {
+    const offenders = platformFiles().filter((file) => COURSE_IMPORT.test(read(file)));
     expect(offenders).toEqual([]);
   });
 
-  it('keeps the import debt list honest: every listed debt still offends', () => {
-    const settled = [...IMPORT_DEBTS].filter((file) => !COURSE_IMPORT.test(read(file)));
-    expect(settled).toEqual([]);
-  });
-
-  it('names no course outside the deployment table, beyond the known debts', () => {
+  it('names no course outside the deployment table', () => {
     const offenders = platformFiles()
       .filter((file) => !file.startsWith('scripts/'))
-      .filter((file) => !IDENTITY_DEBTS.has(file))
       .filter((file) => COURSE_IDENTITY.test(read(file)));
     expect(offenders).toEqual([]);
-  });
-
-  it('keeps the identity debt list honest: every listed debt still offends', () => {
-    const settled = [...IDENTITY_DEBTS].filter((file) => !COURSE_IDENTITY.test(read(file)));
-    expect(settled).toEqual([]);
   });
 });

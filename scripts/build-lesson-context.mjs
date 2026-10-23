@@ -1,5 +1,6 @@
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const LESSON_DIR = 'content/lessons';
 const OUTPUT_DIR = 'public/lesson-context';
@@ -80,9 +81,9 @@ export function buildContext(lesson, body, partTitle, notation) {
 }
 
 async function main() {
-  // Imported through the source modules so the curriculum stays the single source of truth.
-  const { allLessons, partOfLesson } = await import('../content/curriculum.ts');
-  const { NOTATION } = await import('../content/notation.ts');
+  // Imported from the course's own files in the working directory.
+  const { allLessons, partOfLesson } = await import(pathToFileURL(resolve('content/curriculum.ts')).href);
+  const { NOTATION } = await import(pathToFileURL(resolve('content/notation.ts')).href);
 
   await mkdir(OUTPUT_DIR, { recursive: true });
   const present = new Set(await readdir(LESSON_DIR));
