@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { ChoiceExercise, NumericExercise, PredictExercise, VectorExercise } from './types';
+import type {
+  ChoiceExercise, ClassifyExercise, NumericExercise, PredictExercise, SequenceExercise, VectorExercise,
+} from './types';
 import { check, isAnswered } from './check';
 
 const numeric: NumericExercise = {
@@ -174,5 +176,79 @@ describe('isAnswered', () => {
     // [].every() is vacuously true, so without a length check this gates as
     // answered and only fails later inside check().
     expect(isAnswered(vector, [])).toBe(false);
+  });
+});
+
+const sequence: SequenceExercise = {
+  kind: 'sequence',
+  id: 'order-the-pass',
+  prompt: 'Put the steps of a forward pass in order.',
+  steps: ['Multiply by the weights', 'Add the bias', 'Apply the activation'],
+  presented: [2, 0, 1],
+  misconceptions: { 2: 'The activation acts on the biased sum, so it cannot come first.' },
+};
+
+const classify: ClassifyExercise = {
+  kind: 'classify',
+  id: 'parameter-or-activation',
+  prompt: 'Which of these are parameters, and which are activations?',
+  categories: [{ id: 'parameter', label: 'Parameter' }, { id: 'activation', label: 'Activation' }],
+  items: [
+    { text: 'The weight matrix', category: 'parameter' },
+    { text: 'The hidden layer output', category: 'activation', misconception: 'Outputs change with the input; parameters do not.' },
+  ],
+};
+
+describe('check, sequence', () => {
+  it('accepts the correct order', () => {
+    expect(check(sequence, [0, 1, 2])).toEqual({ correct: true, message: 'Correct.' });
+  });
+
+  it('names the first misplaced step and the misconception its placement implies', () => {
+    expect(check(sequence, [2, 0, 1])).toEqual({
+      correct: false,
+      message: 'Step 1 should be "Multiply by the weights", not "Apply the activation".',
+      hint: 'The activation acts on the biased sum, so it cannot come first.',
+    });
+  });
+
+  it('falls back to the exercise hint when the misplaced step has no misconception', () => {
+    expect(check({ ...sequence, hint: 'Think about what each step needs.' }, [1, 0, 2])).toEqual({
+      correct: false,
+      message: 'Step 1 should be "Multiply by the weights", not "Add the bias".',
+      hint: 'Think about what each step needs.',
+    });
+  });
+
+  it('is answered by any permutation of the steps, and by nothing else', () => {
+    expect(isAnswered(sequence, [2, 0, 1])).toBe(true);
+    expect(isAnswered(sequence, [0, 1])).toBe(false);
+    expect(check(sequence, [0, 0, 1]).correct).toBe(false);
+    expect(check(sequence, [0, 1]).message).toMatch(/every step/);
+  });
+});
+
+describe('check, classify', () => {
+  it('accepts every item in its category', () => {
+    expect(check(classify, ['parameter', 'activation'])).toEqual({ correct: true, message: 'Correct.' });
+  });
+
+  it('counts the right placements and explains each misplacement', () => {
+    expect(check(classify, ['parameter', 'parameter'])).toEqual({
+      correct: false,
+      message: '1 of 2 placed correctly. "The hidden layer output" belongs under Activation, not Parameter. '
+        + 'Outputs change with the input; parameters do not.',
+    });
+    expect(check(classify, ['activation', 'parameter'])).toEqual({
+      correct: false,
+      message: '0 of 2 placed correctly. "The weight matrix" belongs under Parameter, not Activation. '
+        + '"The hidden layer output" belongs under Activation, not Parameter. Outputs change with the input; parameters do not.',
+    });
+  });
+
+  it('is unanswered until every item has a category', () => {
+    expect(isAnswered(classify, ['parameter', null])).toBe(false);
+    expect(isAnswered(classify, ['parameter', 'activation'])).toBe(true);
+    expect(check(classify, ['parameter', null]).message).toMatch(/every item/);
   });
 });

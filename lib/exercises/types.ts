@@ -32,10 +32,7 @@ export interface VectorExercise extends ExerciseBase {
   hint?: string;
 }
 
-/**
- * Commit to a prediction, then see what actually happens. The reveal is the
- * point: it lands only after the learner has something at stake.
- */
+/** Commit to a prediction, then see what actually happens. */
 export interface PredictExercise extends ExerciseBase {
   kind: 'predict';
   options: readonly string[];
@@ -43,16 +40,44 @@ export interface PredictExercise extends ExerciseBase {
   reveal: string;
 }
 
+/** Steps shown out of order; the learner restores the order. */
+export interface SequenceExercise extends ExerciseBase {
+  kind: 'sequence';
+  /** In the correct order. */
+  steps: readonly string[];
+  /** The order the steps are first shown in: a permutation of the step indices, fixed by the author. */
+  presented: readonly number[];
+  /** Keyed by step index: what placing that step where it does not belong usually means. */
+  misconceptions?: Readonly<Record<number, string>>;
+  hint?: string;
+}
+
+/** Each item belongs to one category; the learner places every item. */
+export interface ClassifyExercise extends ExerciseBase {
+  kind: 'classify';
+  categories: readonly { id: string; label: string }[];
+  items: readonly { text: string; category: string; misconception?: string }[];
+  hint?: string;
+}
+
 export type ExerciseSpec =
   | NumericExercise
   | ChoiceExercise
   | VectorExercise
-  | PredictExercise;
+  | PredictExercise
+  | SequenceExercise
+  | ClassifyExercise;
 
-/** The answer shape each kind expects. Choice indices use -1 for unanswered. */
+/**
+ * The answer shape each kind expects. Choice indices use -1 for unanswered; a
+ * sequence is the step indices in the learner's order; a classification is one
+ * category id per item, null while unplaced.
+ */
 export type AnswerFor<S extends ExerciseSpec> =
   S extends NumericExercise ? number
   : S extends VectorExercise ? readonly number[]
+  : S extends SequenceExercise ? readonly number[]
+  : S extends ClassifyExercise ? readonly (string | null)[]
   : number;
 
 export interface CheckResult {

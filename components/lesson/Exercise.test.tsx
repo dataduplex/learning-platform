@@ -1,7 +1,9 @@
 import userEvent from '@testing-library/user-event';
 import { screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import type { NumericExercise, PredictExercise, VectorExercise } from '../../lib/exercises';
+import type {
+  ClassifyExercise, NumericExercise, PredictExercise, SequenceExercise, VectorExercise,
+} from '../../lib/exercises';
 import { renderWithProgress } from '../../test/render';
 import { Exercise } from './Exercise';
 
@@ -154,5 +156,97 @@ describe('Exercise, predict-then-reveal', () => {
     await user.tab();
     await user.keyboard('{Enter}');
     expect(screen.getByRole('status')).toHaveTextContent(/correct/i);
+  });
+});
+
+const sequence: SequenceExercise = {
+  kind: 'sequence',
+  id: 'order-the-pass',
+  prompt: 'Put the steps of a forward pass in order.',
+  steps: ['Multiply by the weights', 'Add the bias', 'Apply the activation'],
+  presented: [2, 0, 1],
+  misconceptions: { 2: 'The activation acts on the biased sum, so it cannot come first.' },
+};
+
+const classify: ClassifyExercise = {
+  kind: 'classify',
+  id: 'parameter-or-activation',
+  prompt: 'Which of these are parameters, and which are activations?',
+  categories: [{ id: 'parameter', label: 'Parameter' }, { id: 'activation', label: 'Activation' }],
+  items: [
+    { text: 'The weight matrix', category: 'parameter' },
+    { text: 'The hidden layer output', category: 'activation', misconception: 'Outputs change with the input; parameters do not.' },
+  ],
+};
+
+const stepsShown = () => screen.getAllByRole('listitem')
+  .map((item) => item.querySelector('.exercise-sequence-step')?.textContent);
+
+describe('Exercise, sequence', () => {
+  it('shows the steps in the presented order and checks the order the learner builds', async () => {
+    const user = userEvent.setup();
+    const { store } = renderWithProgress(<Exercise spec={sequence} lesson={LESSON} />);
+    expect(stepsShown()).toEqual(['Apply the activation', 'Multiply by the weights', 'Add the bias']);
+    await user.click(screen.getByRole('button', { name: 'Move "Apply the activation" down' }));
+    await user.click(screen.getByRole('button', { name: 'Move "Apply the activation" down' }));
+    expect(stepsShown()).toEqual(['Multiply by the weights', 'Add the bias', 'Apply the activation']);
+    await user.click(screen.getByRole('button', { name: 'Check' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Correct.');
+    expect(store.load().lessons[LESSON]?.attempts.at(-1)).toMatchObject({ exerciseId: 'order-the-pass', correct: true });
+  });
+
+  it('names the first misplaced step and its misconception, and disables the move that cannot happen', async () => {
+    const user = userEvent.setup();
+    renderWithProgress(<Exercise spec={sequence} lesson={LESSON} />);
+    expect(screen.getByRole('button', { name: 'Move "Apply the activation" up' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Check' }));
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Step 1 should be "Multiply by the weights", not "Apply the activation".',
+    );
+    expect(screen.getByText(/cannot come first/)).toBeInTheDocument();
+  });
+
+  it('keeps focus on the moved step while the keyboard reorders it', async () => {
+    const user = userEvent.setup();
+    renderWithProgress(<Exercise spec={sequence} lesson={LESSON} />);
+    await user.keyboard('{Tab}');
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Move "Apply the activation" down' }));
+    await user.keyboard('{Enter}');
+    expect(stepsShown()).toEqual(['Multiply by the weights', 'Apply the activation', 'Add the bias']);
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Move "Apply the activation" down' }));
+    await user.keyboard('{Enter}');
+    expect(stepsShown()).toEqual(['Multiply by the weights', 'Add the bias', 'Apply the activation']);
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Move "Apply the activation" up' }));
+  });
+
+  it('throws, naming the exercise, when the presented order is not a permutation or is already solved', () => {
+    expect(() => renderWithProgress(<Exercise spec={{ ...sequence, presented: [2, 2, 1] }} lesson={LESSON} />))
+      .toThrow(/order-the-pass/);
+    expect(() => renderWithProgress(<Exercise spec={{ ...sequence, presented: [0, 1, 2] }} lesson={LESSON} />))
+      .toThrow(/order-the-pass/);
+  });
+});
+
+describe('Exercise, classify', () => {
+  it('offers a category per item and checks the placement', async () => {
+    const user = userEvent.setup();
+    renderWithProgress(<Exercise spec={classify} lesson={LESSON} />);
+    expect(screen.getByRole('button', { name: 'Check' })).toBeDisabled();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'The weight matrix' }), 'parameter');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'The hidden layer output' }), 'activation');
+    await user.click(screen.getByRole('button', { name: 'Check' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Correct.');
+  });
+
+  it('names a misplaced item, both categories, and the misconception', async () => {
+    const user = userEvent.setup();
+    renderWithProgress(<Exercise spec={classify} lesson={LESSON} />);
+    await user.selectOptions(screen.getByRole('combobox', { name: 'The weight matrix' }), 'parameter');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'The hidden layer output' }), 'parameter');
+    await user.click(screen.getByRole('button', { name: 'Check' }));
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '1 of 2 placed correctly. "The hidden layer output" belongs under Activation, not Parameter.',
+    );
+    expect(screen.getByText(/Outputs change with the input/)).toBeInTheDocument();
   });
 });

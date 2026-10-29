@@ -1,6 +1,6 @@
 import type {
-  AnswerFor, ChoiceExercise, CheckResult, ExerciseSpec, NumericExercise,
-  PredictExercise, VectorExercise,
+  AnswerFor, ChoiceExercise, CheckResult, ClassifyExercise, ExerciseSpec, NumericExercise,
+  PredictExercise, SequenceExercise, VectorExercise,
 } from './types';
 
 /**
@@ -69,6 +69,44 @@ function checkVector(spec: VectorExercise, answer: readonly number[]): CheckResu
   return { correct: true, message: 'Correct.' };
 }
 
+/** Every index from 0 to length - 1 exactly once. */
+export function isPermutation(order: readonly number[], length: number): boolean {
+  return order.length === length
+    && new Set(order).size === length
+    && order.every((index) => Number.isInteger(index) && index >= 0 && index < length);
+}
+
+function checkSequence(spec: SequenceExercise, answer: readonly number[]): CheckResult {
+  if (!isPermutation(answer, spec.steps.length)) {
+    return { correct: false, message: 'Put every step in order to check your answer.' };
+  }
+  const position = answer.findIndex((index, at) => index !== at);
+  if (position === -1) return { correct: true, message: 'Correct.' };
+  const placed = answer[position] as number;
+  const expected = spec.steps[position] as string;
+  const message = `Step ${position + 1} should be "${expected}", not "${spec.steps[placed] as string}".`;
+  const hint = spec.misconceptions?.[placed] ?? spec.hint;
+  return { correct: false, message, ...(hint === undefined ? {} : { hint }) };
+}
+
+function checkClassify(spec: ClassifyExercise, answer: readonly (string | null)[]): CheckResult {
+  if (answer.length !== spec.items.length || answer.some((category) => category === null)) {
+    return { correct: false, message: 'Place every item to check your answer.' };
+  }
+  const label = (id: string) => spec.categories.find((category) => category.id === id)?.label ?? id;
+  const wrong = spec.items
+    .map((item, index) => ({ item, chosen: answer[index] as string }))
+    .filter(({ item, chosen }) => chosen !== item.category);
+  if (wrong.length === 0) return { correct: true, message: 'Correct.' };
+  const right = spec.items.length - wrong.length;
+  const explanations = wrong.map(({ item, chosen }) => (
+    `"${item.text}" belongs under ${label(item.category)}, not ${label(chosen)}.`
+    + (item.misconception === undefined ? '' : ` ${item.misconception}`)
+  ));
+  const message = [`${right} of ${spec.items.length} placed correctly.`, ...explanations].join(' ');
+  return { correct: false, message, ...(spec.hint === undefined ? {} : { hint: spec.hint }) };
+}
+
 /**
  * The single authority on whether an answer is right. Pure: no DOM, no store,
  * no network. Nothing else in the app may decide correctness.
@@ -82,6 +120,10 @@ export function check<S extends ExerciseSpec>(spec: S, answer: AnswerFor<S>): Ch
       return checkChoice(spec, answer as number);
     case 'vector':
       return checkVector(spec, answer as readonly number[]);
+    case 'sequence':
+      return checkSequence(spec, answer as readonly number[]);
+    case 'classify':
+      return checkClassify(spec, answer as readonly (string | null)[]);
   }
 }
 
@@ -99,6 +141,12 @@ export function isAnswered<S extends ExerciseSpec>(spec: S, answer: AnswerFor<S>
       const values = answer as readonly number[];
       return values.length === spec.answer.length
         && values.every((value) => Number.isFinite(value));
+    }
+    case 'sequence':
+      return isPermutation(answer as readonly number[], spec.steps.length);
+    case 'classify': {
+      const placed = answer as readonly (string | null)[];
+      return placed.length === spec.items.length && placed.every((category) => category !== null);
     }
   }
 }
