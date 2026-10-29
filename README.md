@@ -10,7 +10,7 @@ A course pins it to a release tag as a git dependency:
 
 ```json
 "dependencies": {
-  "@learning/platform": "git+ssh://git@github.com/dataduplex/learning-platform.git#v0.1.0"
+  "@learning/platform": "git+ssh://git@github.com/dataduplex/learning-platform.git#vX.Y.Z"
 }
 ```
 
@@ -39,7 +39,8 @@ The course table is `scripts/infra/targets.mjs`; a new course is a new row.
 ## Releasing
 
 1. `npm run check` here.
-2. In every consuming course, pin the candidate commit hash and run the course's full gate.
-3. Tag (`git tag -a vX.Y.Z -m "..."`, `git push origin main --tags`); courses pin the tag.
+2. Bump `version` in package.json to the tag you are about to cut.
+3. In every consuming course, pin the candidate commit hash and run the course's full gate.
+4. Tag (`git tag -a vX.Y.Z -m "..."`, `git push origin main --tags`); courses pin the tag.
 
 A change that alters a signature a course uses is a major version.
