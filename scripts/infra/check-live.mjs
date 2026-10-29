@@ -42,9 +42,9 @@ if (page.status !== 200) {
   console.table(rows);
   fail(`The lesson page answered ${page.status}; the asset rows need a 200 page to read.`);
 }
-await run(chunkCheck(firstChunkPath(page.body)));
-const css = await run(stylesheetCheck(stylesheetPath(page.body)));
-await run(fontCheck(katexFontPath(css.body)));
+await run(chunkCheck(firstChunkPath(page.body, BASE_PATH)));
+const css = await run(stylesheetCheck(stylesheetPath(page.body, BASE_PATH)));
+await run(fontCheck(katexFontPath(css.body, BASE_PATH)));
 
 const pin = latestSnapshot('dashboard-root.json');
 if (pin === null) {
