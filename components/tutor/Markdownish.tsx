@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import { Katex } from '@/components/primitives/Katex';
+import { Katex } from '../primitives/Katex';
 
 /** Display maths, then inline maths. Order matters: $$ must win over $. */
 const SEGMENT = /(\$\$[^$]+\$\$|\$[^$\n]+\$)/g;

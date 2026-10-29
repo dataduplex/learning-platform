@@ -3,7 +3,7 @@ import { stripMdx, buildContext } from './build-lesson-context.mjs';
 
 describe('stripMdx', () => {
   it('drops import lines', () => {
-    expect(stripMdx("import { X } from '@/x';\n\nHello.")).toBe('Hello.');
+    expect(stripMdx("import { X } from '../x';\n\nHello.")).toBe('Hello.');
   });
 
   it('keeps prose inside a JSX block but drops the tags', () => {

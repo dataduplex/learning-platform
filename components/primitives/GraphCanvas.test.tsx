@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { seriesVar } from '@/lib/palette';
+import { seriesVar } from '../../lib/palette';
 import { GraphCanvas, type GraphEdge, type GraphNode } from './GraphCanvas';
 
 const NODES: readonly GraphNode[] = [

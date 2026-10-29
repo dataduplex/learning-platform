@@ -3,7 +3,7 @@ import { renderWithCourse } from '../../test/render';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { TutorPanel } from './TutorPanel';
-import { TutorError, type TutorRequest, type TutorTransport } from '@/lib/tutor/types';
+import { TutorError, type TutorRequest, type TutorTransport } from '../../lib/tutor/types';
 
 function transportYielding(texts: string[], ready = true): TutorTransport {
   return {

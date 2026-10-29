@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { renderWithProgress } from '@/test/render';
+import { renderWithProgress } from '../../test/render';
 import { CompleteButton } from './CompleteButton';
 
 describe('CompleteButton', () => {

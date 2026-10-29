@@ -1,6 +1,6 @@
 'use client';
 
-import { useLessonProgress } from '@/lib/progress';
+import { useLessonProgress } from '../../lib/progress';
 
 export function CompleteButton({ lessonId }: { lessonId: string }) {
   // useLessonProgress returns the pair, so the state comes from `progress`. Reading

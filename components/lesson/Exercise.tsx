@@ -5,8 +5,8 @@ import type { LessonId } from '../../lib/course/types';
 import {
   check, isAnswered,
   type AnswerFor, type CheckResult, type ExerciseSpec,
-} from '@/lib/exercises';
-import { useLessonProgress } from '@/lib/progress';
+} from '../../lib/exercises';
+import { useLessonProgress } from '../../lib/progress';
 
 type AnyAnswer = number | number[];
 

@@ -1,0 +1,7 @@
+/node_modules
+/coverage
+.DS_Store
+*.tsbuildinfo
+
+# infrastructure snapshots: the distribution's configuration and the edge function's source
+/scripts/infra/.snapshots/

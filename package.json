@@ -1,0 +1,52 @@
+{
+  "name": "@learning/platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The lesson platform shared by the learning courses: lesson shell, exercises, progress, tutor, primitives, shell, test helpers, deploy and infrastructure scripts.",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/dataduplex/learning-platform.git"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm run lint && npm test"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.125.0",
+    "katex": "^0.16.0"
+  },
+  "peerDependencies": {
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "next": "^16.3.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "vitest": "^4.1.11"
+  },
+  "peerDependenciesMeta": {
+    "@testing-library/jest-dom": { "optional": true },
+    "@testing-library/react": { "optional": true },
+    "vitest": { "optional": true }
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.6",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.1.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.4",
+    "jsdom": "^29.1.1",
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
+  }
+}

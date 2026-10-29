@@ -4,7 +4,7 @@ import { useId, useRef, useState, type KeyboardEvent } from 'react';
 import { Legend, type LegendItem } from './Legend';
 import { pixel, polylinePoints } from './Plot';
 import { TableView } from './TableView';
-import { type ArrowHead, arrowHead } from './VectorArrow';
+import { type ArrowHead, arrowHead } from './ArrowHead';
 
 export interface GraphNodeRow {
   readonly name: string;

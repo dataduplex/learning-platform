@@ -1,4 +1,4 @@
-import type { TutorMessage } from '@/lib/tutor/types';
+import type { TutorMessage } from '../../lib/tutor/types';
 import { Markdownish } from './Markdownish';
 
 export function MessageList({

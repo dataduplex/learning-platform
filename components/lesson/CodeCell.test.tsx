@@ -3,7 +3,7 @@ import { renderWithCourse } from '../../test/render';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { CodeCell, fencedCode } from './CodeCell';
-import type { PyodideClient, RunResult } from '@/lib/pyodide/client';
+import type { PyodideClient, RunResult } from '../../lib/pyodide/client';
 
 function stubClient(result: RunResult): PyodideClient {
   return {

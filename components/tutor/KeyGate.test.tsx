@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { KeyGate } from './KeyGate';
-import { memoryStorage } from '@/test/render';
+import { memoryStorage } from '../../test/render';
 
 const KEY = `sk-ant-${'x'.repeat(60)}`;
 const STORAGE_KEY = 'test-course:tutor-key';

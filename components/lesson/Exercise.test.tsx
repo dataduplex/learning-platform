@@ -1,8 +1,8 @@
 import userEvent from '@testing-library/user-event';
 import { screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import type { NumericExercise, PredictExercise, VectorExercise } from '@/lib/exercises';
-import { renderWithProgress } from '@/test/render';
+import type { NumericExercise, PredictExercise, VectorExercise } from '../../lib/exercises';
+import { renderWithProgress } from '../../test/render';
 import { Exercise } from './Exercise';
 
 const LESSON = 'dot-product-similarity' as const;

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { lineEnds } from '@/test/render';
+import { lineEnds } from '../../test/render';
 import {
   CHART_WIDTH, PROBABILITY_TICKS, Plot, createScales, decadeLabel, niceStep, pixel, plotPadding, plotScales, polylinePoints,
   stepTicks, wholeTicks,
