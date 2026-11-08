@@ -1,6 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import { renderWithCourse } from '../../test/render';
 import userEvent from '@testing-library/user-event';
+import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { CodeCell, fencedCode } from './CodeCell';
 import type { PyodideClient, RunResult } from '../../lib/pyodide/client';
@@ -27,6 +28,15 @@ const NESTED = [
 /** What a fenced python block in a lesson compiles to. */
 function fence(code: string) {
   return <pre><code className="language-python">{`${code}\n`}</code></pre>;
+}
+
+/** A child as React's Flight client hands it over after client-side navigation. */
+function lazy(node: ReactNode): ReactNode {
+  return {
+    $$typeof: Symbol.for('react.lazy'),
+    _payload: node,
+    _init: (payload: unknown) => payload,
+  } as unknown as ReactNode;
 }
 
 describe('CodeCell', () => {
@@ -127,6 +137,20 @@ describe('CodeCell', () => {
     expect(() => fencedCode(<pre>{'print(1)\n'}</pre>)).toThrow(message);
     expect(() => fencedCode([fence('1'), fence('2')])).toThrow(message);
     expect(() => fencedCode(undefined)).toThrow(message);
+  });
+
+  it('reads a block that arrives as a lazy reference, as it does after client-side navigation', () => {
+    expect(fencedCode(lazy(fence(NESTED)))).toBe(NESTED);
+    expect(fencedCode(<pre>{lazy(<code className="language-python">{'x = 2\n'}</code>)}</pre>)).toBe('x = 2');
+    expect(fencedCode(lazy(lazy(fence('1'))))).toBe('1');
+    expect(() => fencedCode(lazy(<pre>{'print(1)\n'}</pre>))).toThrow('A code cell holds exactly one fenced python block.');
+  });
+
+  it('renders a cell whose block arrives as a lazy reference', () => {
+    renderWithCourse(
+      <CodeCell client={stubClient({ stdout: '', value: null, error: null })} editable>{lazy(fence(NESTED))}</CodeCell>,
+    );
+    expect(screen.getByRole('textbox', { name: /python/i })).toHaveValue(NESTED);
   });
 
   it('disables Run while a run is in flight, so a slow cell is not queued twice', async () => {

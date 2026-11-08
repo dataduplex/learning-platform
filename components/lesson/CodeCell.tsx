@@ -11,10 +11,37 @@ import {
 
 type Phase = 'idle' | 'loading' | 'running' | 'done';
 
+const REACT_LAZY = Symbol.for('react.lazy');
+
+type LazyNode = { $$typeof: symbol; _payload: unknown; _init: (payload: unknown) => unknown };
+
+/**
+ * The node a lazy reference stands for, or the node itself.
+ *
+ * Lessons render on the server and a code cell on the client. On a full page
+ * load its children arrive as plain elements, but on client-side navigation
+ * React's Flight client can hand them over as lazy references instead. `_init`
+ * is what React calls when it renders one: it returns the value, or throws the
+ * pending thenable so the nearest Suspense boundary waits for it.
+ */
+function unwrapLazy(node: ReactNode): ReactNode {
+  let current: unknown = node;
+  while (
+    typeof current === 'object'
+    && current !== null
+    && (current as LazyNode).$$typeof === REACT_LAZY
+  ) {
+    const lazy = current as LazyNode;
+    current = lazy._init(lazy._payload);
+  }
+  return current as ReactNode;
+}
+
 /** The text of a fenced Python block, without the newline that closes it. */
 export function fencedCode(children: ReactNode): string {
-  if (isValidElement<{ children?: ReactNode }>(children) && children.type === 'pre') {
-    const code = children.props.children;
+  const pre = unwrapLazy(children);
+  if (isValidElement<{ children?: ReactNode }>(pre) && pre.type === 'pre') {
+    const code = unwrapLazy(pre.props.children);
     if (
       isValidElement<{ className?: string; children?: ReactNode }>(code)
       && code.type === 'code'
