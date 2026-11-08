@@ -1,6 +1,6 @@
 {
   "name": "@learning/platform",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "description": "The lesson platform shared by the learning courses: lesson shell, exercises, progress, tutor, primitives, shell, test helpers, deploy and infrastructure scripts.",
   "repository": {
